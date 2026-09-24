@@ -3,30 +3,55 @@ from uuid import uuid4
 
 import pytest
 
-from reliable_webhook_api.domain import EventId, EventStatus, WebhookEvent
+from reliable_webhook_api.domain import (
+    EventId,
+    EventStatus,
+    EventType,
+    ExternalEventId,
+    ProviderName,
+    ReceivedAt,
+    WebhookEvent,
+)
 
 
-def build_event(**overrides: object) -> WebhookEvent:
-    values: dict[str, object] = {
-        "id": EventId(uuid4()),
-        "provider": "example",
-        "external_event_id": "evt_123",
-        "event_type": "order.created",
-        "payload": {"order_id": "123"},
-        "status": EventStatus.RECEIVED,
-        "received_at": datetime.now(UTC),
-    }
-    values.update(overrides)
-    return WebhookEvent(**values)  # type: ignore[arg-type]
+def build_event() -> WebhookEvent:
+    return WebhookEvent(
+        id=EventId(uuid4()),
+        provider=ProviderName("example"),
+        external_event_id=ExternalEventId("evt_123"),
+        event_type=EventType("order.created"),
+        payload={"order_id": "123"},
+        status=EventStatus.RECEIVED,
+        received_at=ReceivedAt(datetime.now(UTC)),
+    )
 
 
-@pytest.mark.parametrize("field", ["provider", "external_event_id", "event_type"])
+def test_webhook_event_accepts_valid_domain_values() -> None:
+    event = build_event()
+
+    assert event.status is EventStatus.RECEIVED
+    assert event.attempts == []
+    assert event.failure_reason is None
+
+
+@pytest.mark.parametrize(
+    ("value_type", "message"),
+    [
+        (ProviderName, "Provider name"),
+        (ExternalEventId, "External event id"),
+        (EventType, "Event type"),
+    ],
+)
 @pytest.mark.parametrize("value", ["", "   "])
-def test_webhook_event_rejects_empty_required_text(field: str, value: str) -> None:
-    with pytest.raises(ValueError):
-        build_event(**{field: value})
+def test_required_webhook_value_rejects_empty_text(
+    value_type: type[ProviderName] | type[ExternalEventId] | type[EventType],
+    message: str,
+    value: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        value_type(value)
 
 
-def test_webhook_event_rejects_naive_received_at() -> None:
-    with pytest.raises(ValueError, match="received_at"):
-        build_event(received_at=datetime.now())
+def test_received_at_rejects_naive_timestamp() -> None:
+    with pytest.raises(ValueError, match="timezone-aware"):
+        ReceivedAt(datetime.now())
