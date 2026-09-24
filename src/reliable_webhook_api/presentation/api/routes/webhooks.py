@@ -1,5 +1,3 @@
-import json
-
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError as PydanticValidationError
@@ -32,20 +30,21 @@ async def receive_webhook_event(
 
     try:
         parsed = WebhookEventRequest.model_validate_json(raw_payload)
-    except (PydanticValidationError, json.JSONDecodeError):
-        return JSONResponse(status_code=400, content={"detail": "Invalid webhook event envelope."})
+        event = EventInput(
+            event_id=parsed.event_id,
+            event_type=parsed.event_type,
+            occurred_at=parsed.occurred_at,
+            data=parsed.data,
+        )
+    except PydanticValidationError:
+        event = None
 
     try:
         result = await use_case.execute(
             ReceiveWebhookEventInput(
                 raw_payload=raw_payload,
                 signature=signature,
-                event=EventInput(
-                    event_id=parsed.event_id,
-                    event_type=parsed.event_type,
-                    occurred_at=parsed.occurred_at,
-                    data=parsed.data,
-                ),
+                event=event,
             )
         )
     except InvalidSignatureError:
