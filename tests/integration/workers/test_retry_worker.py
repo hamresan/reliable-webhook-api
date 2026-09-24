@@ -1,10 +1,10 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from reliable_webhook_api.application.dto import ProcessEventOutput
 from reliable_webhook_api.application.ports import EventProcessingCommand
+from reliable_webhook_api.application.use_cases import ProcessDueRetries
 from reliable_webhook_api.domain import (
     EventId,
     EventStatus,
@@ -17,47 +17,58 @@ from reliable_webhook_api.infrastructure.persistence import (
     SqlAlchemyEventRepository,
     SqlAlchemyUnitOfWork,
 )
-from reliable_webhook_api.infrastructure.workers import RetryWorker
+from reliable_webhook_api.infrastructure.workers import (
+    RetryWorker,
+    SessionProcessingRunner,
+    SqlAlchemyDueRetryReader,
+)
+from tests.integration.workers.support import RecordingProcessingCommand
 from tests.unit.application.use_cases.fakes import FakeClock
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
 
-class RecordingCommand(EventProcessingCommand):
-    def __init__(self) -> None:
-        self.event_ids: list[EventId] = []
-
-    async def execute(self, event_id: EventId) -> ProcessEventOutput:
-        self.event_ids.append(event_id)
-        return ProcessEventOutput(event_id=event_id.value, status=EventStatus.PROCESSED)
-
-
-async def test_worker_processes_due_events_with_fresh_sessions(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    event = WebhookEvent(
-        id=EventId(UUID("00000000-0000-0000-0000-000000000508")),
+def build_event(event_id: UUID, due_at: datetime) -> WebhookEvent:
+    return WebhookEvent(
+        id=EventId(event_id),
         event_type=EventType("invoice.paid"),
         occurred_at=OccurredAt(NOW),
         data={},
         status=EventStatus.RETRY_SCHEDULED,
         received_at=ReceivedAt(NOW),
-        next_retry_at=NOW,
+        next_retry_at=due_at,
+    )
+
+
+async def test_worker_delegates_due_selection_and_processing_to_application(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    due = build_event(
+        UUID("00000000-0000-0000-0000-000000000508"),
+        NOW - timedelta(seconds=1),
+    )
+    future = build_event(
+        UUID("00000000-0000-0000-0000-000000000509"),
+        NOW + timedelta(seconds=1),
     )
     async with session_factory() as session, SqlAlchemyUnitOfWork(session):
-        await SqlAlchemyEventRepository(session).add(event)
+        repository = SqlAlchemyEventRepository(session)
+        await repository.add(due)
+        await repository.add(future)
 
-    command = RecordingCommand()
+    command = RecordingProcessingCommand()
 
     def command_factory(session: AsyncSession) -> EventProcessingCommand:
         del session
         return command
 
-    count = await RetryWorker(
-        session_factory=session_factory,
-        command_factory=command_factory,
+    use_case = ProcessDueRetries(
+        reader=SqlAlchemyDueRetryReader(session_factory),
+        runner=SessionProcessingRunner(session_factory, command_factory),
         clock=FakeClock(NOW),
-    ).run_once()
+    )
+
+    count = await RetryWorker(use_case).run_once()
 
     assert count == 1
-    assert command.event_ids == [event.id]
+    assert command.event_ids == [due.id]
