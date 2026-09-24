@@ -3,5 +3,6 @@ from reliable_webhook_api.application.dto.event import (
     EventOutput,
     ReceiveWebhookEventInput,
 )
+from reliable_webhook_api.application.dto.process_event import ProcessEventOutput
 
-__all__ = ["EventInput", "EventOutput", "ReceiveWebhookEventInput"]
+__all__ = ["EventInput", "EventOutput", "ProcessEventOutput", "ReceiveWebhookEventInput"]
