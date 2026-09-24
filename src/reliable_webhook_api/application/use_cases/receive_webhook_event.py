@@ -10,8 +10,7 @@ from reliable_webhook_api.domain import (
     EventId,
     EventStatus,
     EventType,
-    ExternalEventId,
-    ProviderName,
+    OccurredAt,
     ReceivedAt,
     WebhookEvent,
 )
@@ -42,9 +41,7 @@ class ReceiveWebhookEvent:
         try:
             event_id = EventId(event_input.event_id)
             event_type = EventType(event_input.event_type)
-            occurred_at = event_input.occurred_at
-            if occurred_at.tzinfo is None:
-                raise ValueError("Occurred timestamp must be timezone-aware.")
+            occurred_at = OccurredAt(event_input.occurred_at)
         except ValueError as exc:
             raise ValidationError("Invalid webhook event envelope.") from exc
 
@@ -59,13 +56,9 @@ class ReceiveWebhookEvent:
 
             event = WebhookEvent(
                 id=event_id,
-                provider=ProviderName("generic"),
-                external_event_id=ExternalEventId(str(event_input.event_id)),
                 event_type=event_type,
-                payload={
-                    "occurred_at": occurred_at.isoformat(),
-                    "data": event_input.data,
-                },
+                occurred_at=occurred_at,
+                data=event_input.data,
                 status=EventStatus.RECEIVED,
                 received_at=ReceivedAt(self._clock.now()),
             )
