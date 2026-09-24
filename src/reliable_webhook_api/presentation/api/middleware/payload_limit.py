@@ -1,6 +1,10 @@
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
+class PayloadTooLargeError(Exception):
+    """Raised when a streamed request body exceeds the configured limit."""
+
+
 class PayloadSizeLimitMiddleware:
     """Reject oversized request bodies before they reach application routes."""
 
@@ -18,10 +22,10 @@ class PayloadSizeLimitMiddleware:
         if content_length is not None:
             try:
                 if int(content_length) > self._max_payload_bytes:
-                    await self._send_rejection(send, 413, b'Request payload is too large.')
+                    await self._send_rejection(send, 413, "Request payload is too large.")
                     return
             except ValueError:
-                await self._send_rejection(send, 400, b'Invalid Content-Length header.')
+                await self._send_rejection(send, 400, "Invalid Content-Length header.")
                 return
 
         consumed = 0
@@ -32,20 +36,16 @@ class PayloadSizeLimitMiddleware:
             if message["type"] == "http.request":
                 consumed += len(message.get("body", b""))
                 if consumed > self._max_payload_bytes:
-                    return {
-                        "type": "http.disconnect",
-                    }
+                    raise PayloadTooLargeError
             return message
 
         try:
             await self._app(scope, limited_receive, send)
-        except RuntimeError as exc:
-            if consumed <= self._max_payload_bytes:
-                raise
-            await self._send_rejection(send, 413, b'Request payload is too large.')
+        except PayloadTooLargeError:
+            await self._send_rejection(send, 413, "Request payload is too large.")
 
-    async def _send_rejection(self, send: Send, status: int, detail: bytes) -> None:
-        body = b'{"detail":"' + detail + b'"}'
+    async def _send_rejection(self, send: Send, status: int, detail: str) -> None:
+        body = ('{"detail":"' + detail + '"}').encode()
         await send(
             {
                 "type": "http.response.start",
