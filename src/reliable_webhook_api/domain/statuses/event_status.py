@@ -6,4 +6,5 @@ class EventStatus(StrEnum):
     PROCESSING = "processing"
     PROCESSED = "processed"
     FAILED = "failed"
+    RETRY_SCHEDULED = "retry_scheduled"
     DEAD_LETTER = "dead_letter"
