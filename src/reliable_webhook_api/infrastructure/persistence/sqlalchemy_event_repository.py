@@ -50,9 +50,7 @@ class SqlAlchemyEventRepository(EventRepository):
         model.received_at = event.received_at.value
         model.status = event.status.value
         model.failure_code = event.failure_reason.code.value if event.failure_reason else None
-        model.failure_message = (
-            event.failure_reason.message.value if event.failure_reason else None
-        )
+        model.failure_message = event.failure_reason.message.value if event.failure_reason else None
         model.version += 1
         model.updated_at = datetime.now(UTC)
         model.attempts = [

@@ -12,7 +12,10 @@ from reliable_webhook_api.infrastructure.persistence import (
     create_database_engine,
     create_session_factory,
 )
-from reliable_webhook_api.infrastructure.persistence.models import EventModel, ProcessingAttemptModel
+from reliable_webhook_api.infrastructure.persistence.models import (
+    EventModel,
+    ProcessingAttemptModel,
+)
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",

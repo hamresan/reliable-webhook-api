@@ -15,7 +15,10 @@ from reliable_webhook_api.domain import (
     ReceivedAt,
     WebhookEvent,
 )
-from reliable_webhook_api.infrastructure.persistence.models import EventModel, ProcessingAttemptModel
+from reliable_webhook_api.infrastructure.persistence.models import (
+    EventModel,
+    ProcessingAttemptModel,
+)
 
 
 class EventPersistenceMapper:
@@ -61,7 +64,9 @@ class EventPersistenceMapper:
             started_at=attempt.period.started_at.value,
             finished_at=attempt.period.finished_at.value if attempt.period.finished_at else None,
             failure_code=attempt.failure_reason.code.value if attempt.failure_reason else None,
-            failure_message=attempt.failure_reason.message.value if attempt.failure_reason else None,
+            failure_message=attempt.failure_reason.message.value
+            if attempt.failure_reason
+            else None,
         )
 
     @staticmethod
