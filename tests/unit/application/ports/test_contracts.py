@@ -34,6 +34,9 @@ class StubRepository(EventRepository):
     async def claim_for_processing(self, event_id: EventId) -> WebhookEvent | None:
         return None
 
+    async def schedule_retry(self, event_id: EventId, due_at: datetime) -> None:
+        return None
+
     async def list(self, status: EventStatus | None = None) -> list[WebhookEvent]:
         return []
 
