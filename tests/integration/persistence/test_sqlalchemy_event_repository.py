@@ -126,8 +126,11 @@ async def test_unique_event_id_is_translated_to_application_error(
         async with SqlAlchemyUnitOfWork(session):
             await repository.add(event)
 
-    with pytest.raises(DuplicateEventError):
-        async with session_factory() as session:
-            repository = SqlAlchemyEventRepository(session)
-            async with SqlAlchemyUnitOfWork(session):
-                await repository.add(build_event())
+    async with session_factory() as session:
+        repository = SqlAlchemyEventRepository(session)
+        with pytest.raises(DuplicateEventError):
+            await repository.add(build_event())
+
+        persisted = await repository.get(event.id)
+
+    assert persisted == event
