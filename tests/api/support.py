@@ -5,7 +5,7 @@ from reliable_webhook_api.application.use_cases import ReceiveWebhookEvent
 from reliable_webhook_api.infrastructure.clock import SystemClock
 from reliable_webhook_api.infrastructure.persistence import InMemoryEventRepository
 from reliable_webhook_api.infrastructure.security import HmacSha256SignatureVerifier
-from tests.unit.application.use_cases.fakes import FakeUnitOfWork
+from tests.support.fake_unit_of_work import FakeUnitOfWork
 
 
 def sign(secret: str, payload: bytes) -> str:
