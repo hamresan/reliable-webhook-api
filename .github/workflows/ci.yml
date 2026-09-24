@@ -34,4 +34,4 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - run: uv sync --dev
-      - run: make check
+      - run: make ci-check
