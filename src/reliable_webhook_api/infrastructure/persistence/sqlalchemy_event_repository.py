@@ -56,7 +56,7 @@ class SqlAlchemyEventRepository(EventRepository):
         model.version += 1
         model.updated_at = datetime.now(UTC)
         model.attempts = [
-            EventPersistenceMapper._attempt_to_model(attempt) for attempt in event.attempts
+            EventPersistenceMapper.attempt_to_model(attempt) for attempt in event.attempts
         ]
         await self._session.flush()
 
