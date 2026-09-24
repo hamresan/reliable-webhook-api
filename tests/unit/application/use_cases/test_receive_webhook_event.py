@@ -2,13 +2,6 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
-from tests.unit.application.use_cases.fakes import (
-    FakeClock,
-    FakeSignatureVerifier,
-    FakeTransaction,
-    InMemoryEventRepository,
-)
-
 from reliable_webhook_api.application.dto import EventInput, ReceiveWebhookEventInput
 from reliable_webhook_api.application.errors import InvalidSignatureError, ValidationError
 from reliable_webhook_api.application.use_cases import ReceiveWebhookEvent
@@ -20,6 +13,12 @@ from reliable_webhook_api.domain import (
     ProviderName,
     ReceivedAt,
     WebhookEvent,
+)
+from tests.unit.application.use_cases.fakes import (
+    FakeClock,
+    FakeSignatureVerifier,
+    FakeTransaction,
+    InMemoryEventRepository,
 )
 
 EVENT_ID = UUID("00000000-0000-0000-0000-000000000001")
