@@ -4,10 +4,9 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from reliable_webhook_api.application.ports import Metrics
-from reliable_webhook_api.infrastructure.health import DatabaseReadinessChecker
-from reliable_webhook_api.infrastructure.observability import get_metrics
+from reliable_webhook_api.application.ports import Metrics, ReadinessChecker
 from reliable_webhook_api.presentation.api.dependencies.health import get_readiness_checker
+from reliable_webhook_api.presentation.api.dependencies.metrics import get_metrics_dependency
 
 router = APIRouter()
 
@@ -20,8 +19,8 @@ class ReadinessResponse(BaseModel):
     status: Literal["ready"]
 
 
-ReadinessDependency = Annotated[DatabaseReadinessChecker, Depends(get_readiness_checker)]
-MetricsDependency = Annotated[Metrics, Depends(get_metrics)]
+ReadinessDependency = Annotated[ReadinessChecker, Depends(get_readiness_checker)]
+MetricsDependency = Annotated[Metrics, Depends(get_metrics_dependency)]
 
 
 @router.get("/health", response_model=HealthResponse)
