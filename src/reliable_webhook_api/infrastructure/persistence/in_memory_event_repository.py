@@ -14,3 +14,9 @@ class InMemoryEventRepository(EventRepository):
 
     async def save(self, event: WebhookEvent) -> None:
         self._events[event.id] = event
+
+    def count(self) -> int:
+        return len(self._events)
+
+    def is_empty(self) -> bool:
+        return not self._events
