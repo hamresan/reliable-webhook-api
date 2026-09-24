@@ -1,17 +1,20 @@
-from datetime import datetime
-
 from reliable_webhook_api.application.dto.operations import RetryEventOutput
 from reliable_webhook_api.application.errors import InvalidTransitionError, NotFoundError
-from reliable_webhook_api.application.ports import Clock, EventRepository, RetryScheduler, UnitOfWork
+from reliable_webhook_api.application.ports import (
+    Clock,
+    EventRepository,
+    RetryScheduler,
+    UnitOfWork,
+)
 from reliable_webhook_api.domain import (
     AttemptNumber,
     EventId,
     EventStatus,
     EventTransitionPolicy,
     ExponentialBackoff,
+    RetryableFailurePolicy,
     RetryNotAllowedError,
     RetryPolicy,
-    RetryableFailurePolicy,
 )
 
 
