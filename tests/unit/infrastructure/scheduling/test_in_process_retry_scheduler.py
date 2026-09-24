@@ -1,6 +1,7 @@
-from reliable_webhook_api.infrastructure.scheduling import InProcessRetryScheduler
 from tests.unit.application.support import build_event
 from tests.unit.application.support.event_builder import NOW
+
+from reliable_webhook_api.infrastructure.scheduling import InProcessRetryScheduler
 
 
 async def test_scheduler_records_requested_retry_without_persistence() -> None:
