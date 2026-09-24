@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from reliable_webhook_api.application.ports import EventRepository
 from reliable_webhook_api.domain import EventId, EventStatus, WebhookEvent
 
@@ -25,6 +27,11 @@ class InMemoryEventRepository(EventRepository):
         event.status = EventStatus.PROCESSING
         event.next_retry_at = None
         return event
+
+    async def schedule_retry(self, event_id: EventId, due_at: datetime) -> None:
+        event = self._events[event_id]
+        event.status = EventStatus.RETRY_SCHEDULED
+        event.next_retry_at = due_at
 
     async def list(self, status: EventStatus | None = None) -> list[WebhookEvent]:
         events = list(self._events.values())
