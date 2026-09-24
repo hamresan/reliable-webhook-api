@@ -1,6 +1,11 @@
 from reliable_webhook_api.application.dto import EventOutput, ReceiveWebhookEventInput
 from reliable_webhook_api.application.errors import InvalidSignatureError, ValidationError
-from reliable_webhook_api.application.ports import Clock, EventRepository, SignatureVerifier, Transaction
+from reliable_webhook_api.application.ports import (
+    Clock,
+    EventRepository,
+    SignatureVerifier,
+    Transaction,
+)
 from reliable_webhook_api.domain import (
     EventId,
     EventStatus,
