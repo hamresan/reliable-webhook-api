@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from reliable_webhook_api.application.dto import ProcessEventOutput
 from reliable_webhook_api.application.ports import EventProcessingCommand
@@ -32,7 +32,9 @@ class RecordingCommand(EventProcessingCommand):
         return ProcessEventOutput(event_id=event_id.value, status=EventStatus.PROCESSED)
 
 
-async def test_worker_processes_due_events_with_fresh_sessions(session_factory) -> None:
+async def test_worker_processes_due_events_with_fresh_sessions(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
     event = WebhookEvent(
         id=EventId(UUID("00000000-0000-0000-0000-000000000508")),
         event_type=EventType("invoice.paid"),
