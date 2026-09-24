@@ -16,6 +16,8 @@ def test_settings_use_safe_defaults_without_required_secrets(
     assert settings.environment == "development"
     assert settings.host == "0.0.0.0"
     assert settings.port == 8000
+    assert settings.webhook_secret == ""
+    assert settings.webhook_signature_header == "X-Webhook-Signature"
 
 
 def test_test_configuration_does_not_read_real_env_file(

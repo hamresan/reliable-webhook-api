@@ -12,13 +12,7 @@ from reliable_webhook_api.domain.transitions import (
     EventTransitionPolicy,
     InvalidEventTransitionError,
 )
-from reliable_webhook_api.domain.webhooks import (
-    EventType,
-    ExternalEventId,
-    ProviderName,
-    ReceivedAt,
-    WebhookEvent,
-)
+from reliable_webhook_api.domain.webhooks import EventType, OccurredAt, ReceivedAt, WebhookEvent
 
 __all__ = [
     "AttemptNumber",
@@ -26,16 +20,15 @@ __all__ = [
     "EventStatus",
     "EventTransitionPolicy",
     "EventType",
-    "ExternalEventId",
     "FailureCode",
     "FailureMessage",
     "FailureReason",
     "InvalidEventTransitionError",
     "MaxAttempts",
+    "OccurredAt",
     "ProcessingAttempt",
     "ProcessingPeriod",
     "ProcessingTimestamp",
-    "ProviderName",
     "RetryNotAllowedError",
     "RetryPolicy",
     "ReceivedAt",

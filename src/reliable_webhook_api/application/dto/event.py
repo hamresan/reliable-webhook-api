@@ -15,6 +15,14 @@ class EventInput:
 
 
 @dataclass(frozen=True, slots=True)
+class ReceiveWebhookEventInput:
+    raw_payload: bytes
+    signature: str | None
+    event: EventInput | None
+
+
+@dataclass(frozen=True, slots=True)
 class EventOutput:
     event_id: UUID
     status: EventStatus
+    duplicate: bool = False

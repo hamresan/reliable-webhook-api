@@ -5,8 +5,7 @@ from reliable_webhook_api.domain import (
     EventId,
     EventStatus,
     EventType,
-    ExternalEventId,
-    ProviderName,
+    OccurredAt,
     ReceivedAt,
     WebhookEvent,
 )
@@ -15,10 +14,9 @@ from reliable_webhook_api.domain import (
 def build_event() -> WebhookEvent:
     return WebhookEvent(
         id=EventId(uuid4()),
-        provider=ProviderName("example"),
-        external_event_id=ExternalEventId("evt_123"),
         event_type=EventType("order.created"),
-        payload={"order_id": "123"},
+        occurred_at=OccurredAt(datetime.now(UTC)),
+        data={"order_id": "123"},
         status=EventStatus.RECEIVED,
         received_at=ReceivedAt(datetime.now(UTC)),
     )

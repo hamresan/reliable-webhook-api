@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     environment: str = "development"
     host: str = "0.0.0.0"
     port: int = Field(default=8000, ge=1, le=65535)
+    webhook_secret: str = ""
+    webhook_signature_header: str = "X-Webhook-Signature"
 
     model_config = SettingsConfigDict(
         env_prefix="APP_",
