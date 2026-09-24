@@ -5,8 +5,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from reliable_webhook_api.application.errors import InvalidTransitionError
-from reliable_webhook_api.application.processing import ProcessingFailureMapper
 from reliable_webhook_api.application.ports import EventProcessor
+from reliable_webhook_api.application.processing import ProcessingFailureMapper
 from reliable_webhook_api.application.use_cases import ProcessReceivedEvent
 from reliable_webhook_api.domain import (
     EventId,

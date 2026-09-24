@@ -4,8 +4,8 @@ from uuid import UUID
 import pytest
 
 from reliable_webhook_api.application.errors import NotFoundError
-from reliable_webhook_api.application.processing import ProcessingFailureMapper
 from reliable_webhook_api.application.ports import EventProcessor
+from reliable_webhook_api.application.processing import ProcessingFailureMapper
 from reliable_webhook_api.application.use_cases.process_received_event import ProcessReceivedEvent
 from reliable_webhook_api.domain import (
     EventId,

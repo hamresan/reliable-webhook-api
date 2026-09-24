@@ -1,12 +1,12 @@
 from reliable_webhook_api.application.dto.process_event import ProcessEventOutput
 from reliable_webhook_api.application.errors import InvalidTransitionError, NotFoundError
-from reliable_webhook_api.application.processing import ProcessingFailureMapper
 from reliable_webhook_api.application.ports import (
     Clock,
     EventProcessor,
     EventRepository,
     UnitOfWork,
 )
+from reliable_webhook_api.application.processing import ProcessingFailureMapper
 from reliable_webhook_api.domain import (
     AttemptNumber,
     EventId,
