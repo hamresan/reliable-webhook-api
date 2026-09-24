@@ -1,16 +1,8 @@
 from httpx import ASGITransport, AsyncClient
 
-from reliable_webhook_api.infrastructure.health import DatabaseReadinessChecker
 from reliable_webhook_api.presentation.api.app import create_app
 from reliable_webhook_api.presentation.api.dependencies.health import get_readiness_checker
-
-
-class FakeReadinessChecker(DatabaseReadinessChecker):
-    def __init__(self, ready: bool) -> None:
-        self._ready = ready
-
-    async def is_ready(self) -> bool:
-        return self._ready
+from tests.api.fakes import FakeReadinessChecker
 
 
 async def test_health_returns_ok_and_correlation_id() -> None:
