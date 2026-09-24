@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from httpx import ASGITransport, AsyncClient
+
 from reliable_webhook_api.config import get_settings
 from reliable_webhook_api.infrastructure.persistence import InMemoryEventRepository
 from reliable_webhook_api.presentation.api.app import create_app
