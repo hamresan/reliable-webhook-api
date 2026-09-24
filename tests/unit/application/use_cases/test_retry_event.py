@@ -10,13 +10,13 @@ from reliable_webhook_api.domain import (
     EventTransitionPolicy,
     ExponentialBackoff,
     MaxAttempts,
-    RetryPolicy,
     RetryableFailurePolicy,
+    RetryPolicy,
 )
 from tests.support.fake_unit_of_work import FakeUnitOfWork
 from tests.unit.application.support import FakeRetryScheduler, build_event
-from tests.unit.application.use_cases.fakes import FakeClock, InMemoryEventRepository
 from tests.unit.application.support.event_builder import NOW
+from tests.unit.application.use_cases.fakes import FakeClock, InMemoryEventRepository
 
 
 def build_use_case(
