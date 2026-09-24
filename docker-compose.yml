@@ -12,11 +12,11 @@ services:
       retries: 10
     volumes:
       - webhook_postgres_data:/var/lib/postgresql/data
-
+  
   api:
     build: .
     ports:
-      - "8000:8000"
+      - "${APP_PORT:-8000}:8000"
     environment:
       APP_ENVIRONMENT: development
       APP_DATABASE_URL: postgresql+asyncpg://webhook:webhook@db:5432/webhook
