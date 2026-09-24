@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
@@ -25,4 +26,4 @@ class ProcessingAttemptModel(Base):
     failure_code: Mapped[str | None] = mapped_column(String(255))
     failure_message: Mapped[str | None] = mapped_column(String(2000))
 
-    event: Mapped["EventModel"] = relationship(back_populates="attempts")
+    event: Mapped[Any] = relationship("EventModel", back_populates="attempts")
