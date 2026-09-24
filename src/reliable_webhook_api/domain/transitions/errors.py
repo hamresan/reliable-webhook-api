@@ -1,4 +1,4 @@
-from reliable_webhook_api.domain.events.status import EventStatus
+from reliable_webhook_api.domain.statuses import EventStatus
 
 
 class InvalidEventTransitionError(ValueError):
