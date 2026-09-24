@@ -25,7 +25,8 @@ class SqlAlchemyEventQuery(EventQuery):
 
     async def page(self, status: EventStatus | None, offset: int, limit: int) -> EventPage:
         filters = () if status is None else (EventModel.status == status.value,)
-        total = await self._session.scalar(select(func.count()).select_from(EventModel).where(*filters))
+        count_statement = select(func.count()).select_from(EventModel).where(*filters)
+        total = await self._session.scalar(count_statement)
         statement = (
             select(EventModel)
             .where(*filters)
