@@ -9,8 +9,7 @@ class RetryNotAllowedError(ValueError):
         attempt_number: AttemptNumber,
     ) -> None:
         super().__init__(
-            "Retry is not allowed for "
-            f"status={status.value}, attempt={attempt_number.value}."
+            f"Retry is not allowed for status={status.value}, attempt={attempt_number.value}."
         )
         self.status = status
         self.attempt_number = attempt_number
