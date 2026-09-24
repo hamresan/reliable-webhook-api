@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
+
 from reliable_webhook_api.application.dto import EventInput, ReceiveWebhookEventInput
 from reliable_webhook_api.application.errors import InvalidSignatureError, ValidationError
 from reliable_webhook_api.application.use_cases import ReceiveWebhookEvent
