@@ -1,7 +1,5 @@
 from datetime import datetime
 
-from datetime import datetime
-
 from reliable_webhook_api.application.ports import (
     Clock,
     EventRepository,
