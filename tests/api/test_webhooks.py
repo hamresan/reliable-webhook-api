@@ -49,7 +49,7 @@ async def test_accepts_signature_for_exact_http_bytes() -> None:
         "status": "received",
         "duplicate": False,
     }
-    assert len(repository._events) == 1
+    assert repository.count() == 1
 
 
 async def test_reserialized_json_signature_does_not_verify_different_http_bytes() -> None:
@@ -68,7 +68,7 @@ async def test_reserialized_json_signature_does_not_verify_different_http_bytes(
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid webhook signature."}
-    assert repository._events == {}
+    assert repository.is_empty()
 
 
 async def test_duplicate_delivery_returns_success_without_second_event() -> None:
@@ -98,7 +98,7 @@ async def test_duplicate_delivery_returns_success_without_second_event() -> None
     assert first.status_code == 202
     assert second.status_code == 200
     assert second.json()["duplicate"] is True
-    assert len(repository._events) == 1
+    assert repository.count() == 1
 
 
 async def test_missing_or_invalid_signature_is_safe_and_not_persisted() -> None:
@@ -114,8 +114,8 @@ async def test_missing_or_invalid_signature_is_safe_and_not_persisted() -> None:
     assert invalid.status_code == 401
     assert missing.json() == {"detail": "Invalid webhook signature."}
     assert invalid.json() == {"detail": "Invalid webhook signature."}
-    assert missing_repository._events == {}
-    assert invalid_repository._events == {}
+    assert missing_repository.is_empty()
+    assert invalid_repository.is_empty()
 
 
 async def test_invalid_envelope_returns_bad_request_after_valid_signature() -> None:
@@ -125,4 +125,4 @@ async def test_invalid_envelope_returns_bad_request_after_valid_signature() -> N
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Invalid webhook event envelope."}
-    assert repository._events == {}
+    assert repository.is_empty()
