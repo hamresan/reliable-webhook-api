@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from httpx import ASGITransport, AsyncClient
+from pytest import MonkeyPatch
 
 from reliable_webhook_api.config import get_settings
 from reliable_webhook_api.infrastructure.persistence import InMemoryEventRepository
@@ -125,4 +126,54 @@ async def test_invalid_envelope_returns_bad_request_after_valid_signature() -> N
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Invalid webhook event envelope."}
+    assert repository.is_empty()
+
+
+async def test_uses_configured_signature_header(monkeypatch: MonkeyPatch) -> None:
+    payload = (
+        b'{"event_id":"00000000-0000-0000-0000-000000000001",'
+        b'"event_type":"invoice.paid","occurred_at":"2026-09-24T12:00:00Z","data":{}}'
+    )
+    custom_header = "X-Custom-Webhook-Signature"
+    monkeypatch.setenv("APP_WEBHOOK_SIGNATURE_HEADER", custom_header)
+    get_settings.cache_clear()
+
+    try:
+        app = create_app()
+        repository = InMemoryEventRepository()
+        app.dependency_overrides[get_receive_webhook_event] = lambda: build_receive_use_case(
+            repository,
+            SECRET,
+        )
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
+            response = await client.post(
+                "/webhooks/events",
+                content=payload,
+                headers={
+                    "content-type": "application/json",
+                    custom_header: sign(SECRET, payload),
+                },
+            )
+    finally:
+        get_settings.cache_clear()
+
+    assert response.status_code == 202
+    assert repository.count() == 1
+
+
+async def test_invalid_signature_response_does_not_leak_signature_or_secret() -> None:
+    payload = (
+        b'{"event_id":"00000000-0000-0000-0000-000000000001",'
+        b'"event_type":"invoice.paid","occurred_at":"2026-09-24T12:00:00Z","data":{}}'
+    )
+    received_signature = "f" * 64
+
+    response, repository = await post_raw(payload, received_signature)
+
+    assert response.status_code == 401
+    assert received_signature not in response.text
+    assert SECRET not in response.text
     assert repository.is_empty()
