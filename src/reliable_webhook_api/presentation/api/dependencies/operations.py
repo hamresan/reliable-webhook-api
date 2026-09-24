@@ -12,8 +12,8 @@ from reliable_webhook_api.domain import (
     EventTransitionPolicy,
     ExponentialBackoff,
     MaxAttempts,
-    RetryPolicy,
     RetryableFailurePolicy,
+    RetryPolicy,
 )
 from reliable_webhook_api.infrastructure.clock import SystemClock
 from reliable_webhook_api.infrastructure.persistence import (
