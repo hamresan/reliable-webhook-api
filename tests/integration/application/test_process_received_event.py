@@ -115,7 +115,7 @@ async def test_processing_success_is_persisted_and_not_processed_twice(
     persisted = await load_event(session_factory)
     assert status is EventStatus.PROCESSED
     assert persisted.status is EventStatus.PROCESSED
-    assert persisted.next_retry_at is not None
+    assert persisted.next_retry_at is None
     assert len(persisted.attempts) == 1
     assert persisted.attempts[0].failure_reason is None
     assert processor.calls == 1
@@ -143,6 +143,7 @@ async def test_processing_failure_and_attempt_are_persisted(
     assert persisted.failure_reason is not None
     assert persisted.failure_reason.code.value == "processor_error"
     assert persisted.failure_reason.message.value == "Event processor failed."
+    assert persisted.next_retry_at is not None
     assert len(persisted.attempts) == 1
     assert persisted.attempts[0].failure_reason == persisted.failure_reason
     assert processor.calls == 1
