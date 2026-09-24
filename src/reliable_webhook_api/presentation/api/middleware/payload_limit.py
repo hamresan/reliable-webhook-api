@@ -1,3 +1,5 @@
+import json
+
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
@@ -45,7 +47,7 @@ class PayloadSizeLimitMiddleware:
             await self._send_rejection(send, 413, "Request payload is too large.")
 
     async def _send_rejection(self, send: Send, status: int, detail: str) -> None:
-        body = ('{"detail":"' + detail + '"}').encode()
+        body = json.dumps({"detail": detail}, separators=(",", ":")).encode()
         await send(
             {
                 "type": "http.response.start",
