@@ -17,14 +17,26 @@ from reliable_webhook_api.infrastructure.persistence.models import (
     ProcessingAttemptModel,
 )
 
-TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql+asyncpg://webhook:webhook@localhost:5432/webhook_test",
-)
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    if TEST_DATABASE_URL is not None:
+        return
+
+    skip_postgres = pytest.mark.skip(
+        reason="PostgreSQL integration tests require TEST_DATABASE_URL.",
+    )
+    for item in items:
+        item.add_marker(skip_postgres)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def migrated_database() -> Iterator[None]:
+    if TEST_DATABASE_URL is None:
+        yield
+        return
+
     os.environ["APP_DATABASE_URL"] = TEST_DATABASE_URL
     get_settings.cache_clear()
     config = Config("alembic.ini")
@@ -37,6 +49,9 @@ def migrated_database() -> Iterator[None]:
 
 @pytest.fixture(scope="session")
 async def database_engine() -> AsyncIterator[AsyncEngine]:
+    if TEST_DATABASE_URL is None:
+        pytest.skip("PostgreSQL integration tests require TEST_DATABASE_URL.")
+
     engine = create_database_engine(TEST_DATABASE_URL)
     yield engine
     await engine.dispose()
