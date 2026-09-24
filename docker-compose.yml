@@ -21,6 +21,8 @@ services:
       APP_ENVIRONMENT: development
       APP_DATABASE_URL: postgresql+asyncpg://webhook:webhook@db:5432/webhook
       APP_WEBHOOK_SECRET: ${APP_WEBHOOK_SECRET:-replace-with-local-secret}
+      APP_LOGGING_LEVEL: ${APP_LOGGING_LEVEL:-INFO}
+      APP_MAX_PAYLOAD_BYTES: ${APP_MAX_PAYLOAD_BYTES:-1048576}
     depends_on:
       db:
         condition: service_healthy
@@ -28,6 +30,23 @@ services:
       sh -c "uv run alembic upgrade head &&
              uv run uvicorn reliable_webhook_api.presentation.api.app:app
              --host 0.0.0.0 --port 8000"
+
+  worker:
+    profiles: ["worker"]
+    build: .
+    environment:
+      APP_ENVIRONMENT: development
+      APP_DATABASE_URL: postgresql+asyncpg://webhook:webhook@db:5432/webhook
+      APP_WEBHOOK_SECRET: ${APP_WEBHOOK_SECRET:-replace-with-local-secret}
+      APP_LOGGING_LEVEL: ${APP_LOGGING_LEVEL:-INFO}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "while true; do
+             uv run python -m reliable_webhook_api.presentation.cli.retry_worker;
+             sleep 5;
+             done"
 
 volumes:
   webhook_postgres_data:
