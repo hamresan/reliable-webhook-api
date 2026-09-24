@@ -2,6 +2,7 @@ from reliable_webhook_api.application.dto.process_event import ProcessEventOutpu
 from reliable_webhook_api.application.errors import InvalidTransitionError, NotFoundError
 from reliable_webhook_api.application.ports import (
     Clock,
+    EventProcessingCommand,
     EventProcessor,
     EventRepository,
     UnitOfWork,
@@ -20,7 +21,7 @@ from reliable_webhook_api.domain import (
 )
 
 
-class ProcessReceivedEvent:
+class ProcessReceivedEvent(EventProcessingCommand):
     def __init__(
         self,
         repository: EventRepository,
