@@ -42,7 +42,7 @@ class RetryCoordinator:
         self._transition_policy.ensure_allowed(event.status, EventStatus.RETRY_SCHEDULED)
         event.status = EventStatus.RETRY_SCHEDULED
         event.next_retry_at = retry_at
-        await self._repository.save(event)
+        await self._repository.schedule_retry(event.id, retry_at)
         await self._scheduler.schedule(event.id, retry_at)
         return retry_at
 
