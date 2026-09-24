@@ -1,4 +1,4 @@
-.PHONY: install run test lint format format-check typecheck check up down
+.PHONY: install run test coverage lint format format-check typecheck check up down
 
 install:
 	uv sync
@@ -7,7 +7,10 @@ run:
 	uv run uvicorn reliable_webhook_api.presentation.api.app:app --reload
 
 test:
-	uv run pytest --cov=src --cov-report=term-missing --cov-report=term
+	uv run pytest
+
+coverage:
+	uv run pytest --cov=src --cov-report=term-missing
 
 lint:
 	uv run ruff check src tests
@@ -21,7 +24,7 @@ format-check:
 typecheck:
 	uv run pyright src tests
 
-check: lint format-check typecheck test
+check: lint format-check typecheck coverage
 
 up:
 	docker compose up --build -d
