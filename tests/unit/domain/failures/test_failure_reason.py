@@ -1,15 +1,25 @@
 import pytest
 
-from reliable_webhook_api.domain import FailureReason
+from reliable_webhook_api.domain import FailureCode, FailureMessage, FailureReason
 
 
 @pytest.mark.parametrize("value", ["", "   "])
-def test_failure_reason_rejects_empty_code(value: str) -> None:
+def test_failure_code_rejects_empty_value(value: str) -> None:
     with pytest.raises(ValueError, match="code"):
-        FailureReason(code=value, message="Temporary failure")
+        FailureCode(value)
 
 
 @pytest.mark.parametrize("value", ["", "   "])
-def test_failure_reason_rejects_empty_message(value: str) -> None:
+def test_failure_message_rejects_empty_value(value: str) -> None:
     with pytest.raises(ValueError, match="message"):
-        FailureReason(code="temporary", message=value)
+        FailureMessage(value)
+
+
+def test_failure_reason_composes_valid_domain_values() -> None:
+    reason = FailureReason(
+        code=FailureCode("temporary"),
+        message=FailureMessage("Temporary failure"),
+    )
+
+    assert reason.code == FailureCode("temporary")
+    assert reason.message == FailureMessage("Temporary failure")
