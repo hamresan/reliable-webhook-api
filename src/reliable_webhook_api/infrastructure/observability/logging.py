@@ -2,7 +2,7 @@ import logging
 
 
 def configure_logging(level: str) -> None:
-    """Configure structured key-value friendly application logging."""
+    """Configure key-value-friendly application logging."""
 
     logging.basicConfig(
         level=getattr(logging, level),
