@@ -51,8 +51,8 @@ include = ["src", "tests"]
 
 [tool.coverage.run]
 branch = true
-source = ["csv_data_cleaner"]
+source = ["reliable_webhook_api"]
 
 [tool.coverage.report]
-fail_under = 85
+fail_under = 95
 show_missing = true
