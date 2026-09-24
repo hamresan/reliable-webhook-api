@@ -41,6 +41,17 @@ class InMemoryEventRepository(EventRepository):
     async def save(self, event: WebhookEvent) -> None:
         self.events[event.id] = event
 
+    async def claim_for_processing(self, event_id: EventId) -> WebhookEvent | None:
+        event = self.events.get(event_id)
+        if event is None or event.status not in {
+            EventStatus.RECEIVED,
+            EventStatus.RETRY_SCHEDULED,
+        }:
+            return None
+        event.status = EventStatus.PROCESSING
+        event.next_retry_at = None
+        return event
+
     async def list(self, status: EventStatus | None = None) -> list[WebhookEvent]:
         events = list(self.events.values())
         if status is None:
