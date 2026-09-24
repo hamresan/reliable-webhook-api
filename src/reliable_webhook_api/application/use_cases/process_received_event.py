@@ -13,6 +13,7 @@ from reliable_webhook_api.domain import (
     EventStatus,
     EventTransitionPolicy,
     FailureReason,
+    InvalidEventTransitionError,
     ProcessingAttempt,
     ProcessingPeriod,
     ProcessingTimestamp,
@@ -44,7 +45,7 @@ class ProcessReceivedEvent:
 
             try:
                 self._transition_policy.ensure_allowed(event.status, EventStatus.PROCESSING)
-            except ValueError as exc:
+            except InvalidEventTransitionError as exc:
                 raise InvalidTransitionError(str(exc)) from exc
 
             event.status = EventStatus.PROCESSING
