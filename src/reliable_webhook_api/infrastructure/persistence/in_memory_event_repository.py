@@ -1,5 +1,5 @@
 from reliable_webhook_api.application.ports import EventRepository
-from reliable_webhook_api.domain import EventId, WebhookEvent
+from reliable_webhook_api.domain import EventId, EventStatus, WebhookEvent
 
 
 class InMemoryEventRepository(EventRepository):
@@ -14,6 +14,12 @@ class InMemoryEventRepository(EventRepository):
 
     async def save(self, event: WebhookEvent) -> None:
         self._events[event.id] = event
+
+    async def list(self, status: EventStatus | None = None) -> list[WebhookEvent]:
+        events = list(self._events.values())
+        if status is None:
+            return events
+        return [event for event in events if event.status is status]
 
     def count(self) -> int:
         return len(self._events)

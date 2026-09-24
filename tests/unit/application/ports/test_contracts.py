@@ -6,9 +6,9 @@ from reliable_webhook_api.application.ports import (
     EventProcessor,
     EventRepository,
     SignatureVerifier,
-    Transaction,
+    UnitOfWork,
 )
-from reliable_webhook_api.domain import EventId, WebhookEvent
+from reliable_webhook_api.domain import EventId, EventStatus, WebhookEvent
 
 
 class StubClock(Clock):
@@ -31,14 +31,17 @@ class StubRepository(EventRepository):
     async def save(self, event: WebhookEvent) -> None:
         return None
 
+    async def list(self, status: EventStatus | None = None) -> list[WebhookEvent]:
+        return []
+
 
 class StubProcessor(EventProcessor):
     async def process(self, event: WebhookEvent) -> None:
         return None
 
 
-class StubTransaction(Transaction):
-    async def __aenter__(self) -> "StubTransaction":
+class StubUnitOfWork(UnitOfWork):
+    async def __aenter__(self) -> "StubUnitOfWork":
         return self
 
     async def __aexit__(
@@ -55,10 +58,10 @@ def test_ports_can_be_implemented_explicitly() -> None:
     verifier: SignatureVerifier = StubSignatureVerifier()
     repository: EventRepository = StubRepository()
     processor: EventProcessor = StubProcessor()
-    transaction: Transaction = StubTransaction()
+    unit_of_work: UnitOfWork = StubUnitOfWork()
 
     assert clock.now().tzinfo is not None
     assert verifier.verify(b"payload", "signature")
     assert repository is not None
     assert processor is not None
-    assert transaction is not None
+    assert unit_of_work is not None

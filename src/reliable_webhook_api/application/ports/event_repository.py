@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from reliable_webhook_api.domain import EventId, WebhookEvent
+from reliable_webhook_api.domain import EventId, EventStatus, WebhookEvent
 
 
 class EventRepository(Protocol):
@@ -9,3 +9,5 @@ class EventRepository(Protocol):
     async def add(self, event: WebhookEvent) -> None: ...
 
     async def save(self, event: WebhookEvent) -> None: ...
+
+    async def list(self, status: EventStatus | None = None) -> list[WebhookEvent]: ...

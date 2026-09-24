@@ -14,10 +14,10 @@ from reliable_webhook_api.domain import (
     ReceivedAt,
     WebhookEvent,
 )
+from tests.support.fake_unit_of_work import FakeUnitOfWork
 from tests.unit.application.use_cases.fakes import (
     FakeClock,
     FakeSignatureVerifier,
-    FakeTransaction,
     InMemoryEventRepository,
 )
 
@@ -53,7 +53,7 @@ def make_use_case(
         repository=repository,
         signature_verifier=verifier,
         clock=FakeClock(NOW),
-        transaction=FakeTransaction(),
+        unit_of_work=FakeUnitOfWork(),
     )
 
 

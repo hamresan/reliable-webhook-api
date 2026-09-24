@@ -4,9 +4,8 @@ from reliable_webhook_api.application.ports import (
     Clock,
     EventRepository,
     SignatureVerifier,
-    Transaction,
 )
-from reliable_webhook_api.domain import EventId, WebhookEvent
+from reliable_webhook_api.domain import EventId, EventStatus, WebhookEvent
 
 
 class FakeClock(Clock):
@@ -42,15 +41,8 @@ class InMemoryEventRepository(EventRepository):
     async def save(self, event: WebhookEvent) -> None:
         self.events[event.id] = event
 
-
-class FakeTransaction(Transaction):
-    async def __aenter__(self) -> "FakeTransaction":
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: object | None,
-    ) -> bool | None:
-        return None
+    async def list(self, status: EventStatus | None = None) -> list[WebhookEvent]:
+        events = list(self.events.values())
+        if status is None:
+            return events
+        return [event for event in events if event.status is status]

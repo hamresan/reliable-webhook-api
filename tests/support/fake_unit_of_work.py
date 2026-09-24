@@ -1,10 +1,10 @@
 from types import TracebackType
 
-from reliable_webhook_api.application.ports import Transaction
+from reliable_webhook_api.application.ports import UnitOfWork
 
 
-class NoopTransaction(Transaction):
-    async def __aenter__(self) -> "NoopTransaction":
+class FakeUnitOfWork(UnitOfWork):
+    async def __aenter__(self) -> "FakeUnitOfWork":
         return self
 
     async def __aexit__(
