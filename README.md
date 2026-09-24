@@ -14,6 +14,7 @@ src/reliable_webhook_api/
 │   ├── dto/
 │   ├── errors/
 │   ├── ports/
+│   ├── retries/
 │   └── use_cases/
 ├── config/
 ├── domain/
@@ -21,6 +22,8 @@ src/reliable_webhook_api/
 │   ├── clock/
 │   ├── persistence/
 │   │   └── models/
+│   ├── scheduling/
+│   ├── workers/
 │   └── security/
 └── presentation/
     └── api/
@@ -186,7 +189,28 @@ APP_RETRY_BASE_DELAY_SECONDS=30
 APP_RETRY_MAX_DELAY_SECONDS=3600
 ```
 
-Only explicitly classified failure codes are retryable. Invalid-signature requests are rejected before persistence and therefore cannot enter the retry flow. Processed and dead-letter events are terminal and manual retry does not bypass state rules.
+Only explicitly classified failure codes are retryable. A retryable processing failure is automatically moved from `failed` to `retry_scheduled` with bounded exponential backoff; manual retry uses the same policy and cannot bypass state rules. Invalid-signature requests are rejected before persistence and therefore cannot enter the retry flow. Processed and dead-letter events are terminal.
+
+Operational examples:
+
+```bash
+curl http://localhost:8000/events/00000000-0000-0000-0000-000000000001
+
+curl "http://localhost:8000/events?status=retry_scheduled&offset=0&limit=50"
+
+curl -X POST \
+  http://localhost:8000/events/00000000-0000-0000-0000-000000000001/retry
+```
+
+A successful retry request returns `202 Accepted`:
+
+```json
+{
+  "event_id": "00000000-0000-0000-0000-000000000001",
+  "status": "retry_scheduled",
+  "retry_at": "2026-09-24T12:00:30Z"
+}
+```
 
 A scheduled retry is persisted as `retry_scheduled` with `next_retry_at`. Run due retries locally with:
 
@@ -194,7 +218,7 @@ A scheduled retry is persisted as `retry_scheduled` with `next_retry_at`. Run du
 uv run python -m reliable_webhook_api.presentation.cli.retry_worker
 ```
 
-The worker selects only due scheduled events and processes them through the same application processing command. External exactly-once side effects cannot be guaranteed by HTTP alone; the service guarantees one effect invocation per successful internal claim.
+The worker selects only due scheduled events and delegates orchestration to the application use case. Processing uses an atomic PostgreSQL status claim, so concurrent workers cannot both execute the processor for the same claim. A stale due-event selection is skipped safely if another worker has already claimed it. External exactly-once delivery across arbitrary downstream systems is not claimed.
 
 ## License
 
