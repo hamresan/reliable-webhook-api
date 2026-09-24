@@ -44,9 +44,8 @@ async def test_worker_processes_due_events_with_fresh_sessions(
         received_at=ReceivedAt(NOW),
         next_retry_at=NOW,
     )
-    async with session_factory() as session:
-        async with SqlAlchemyUnitOfWork(session):
-            await SqlAlchemyEventRepository(session).add(event)
+    async with session_factory() as session, SqlAlchemyUnitOfWork(session):
+        await SqlAlchemyEventRepository(session).add(event)
 
     command = RecordingCommand()
 
