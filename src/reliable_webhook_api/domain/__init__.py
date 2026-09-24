@@ -1,4 +1,4 @@
-from reliable_webhook_api.domain.failures import FailureReason
+from reliable_webhook_api.domain.failures import FailureCode, FailureMessage, FailureReason
 from reliable_webhook_api.domain.identifiers import EventId
 from reliable_webhook_api.domain.processing import (
     AttemptNumber,
@@ -26,6 +26,8 @@ __all__ = [
     "EventTransitionPolicy",
     "EventType",
     "ExternalEventId",
+    "FailureCode",
+    "FailureMessage",
     "FailureReason",
     "InvalidEventTransitionError",
     "ProcessingAttempt",
