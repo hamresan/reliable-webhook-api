@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -41,17 +39,3 @@ class SqlAlchemyEventQuery(EventQuery):
             total=total or 0,
         )
 
-    async def due_retries(self, due_at: datetime, limit: int) -> list[WebhookEvent]:
-        statement = (
-            select(EventModel)
-            .where(
-                EventModel.status == EventStatus.RETRY_SCHEDULED.value,
-                EventModel.next_retry_at.is_not(None),
-                EventModel.next_retry_at <= due_at,
-            )
-            .options(selectinload(EventModel.attempts))
-            .order_by(EventModel.next_retry_at, EventModel.event_id)
-            .limit(limit)
-        )
-        models = (await self._session.scalars(statement)).all()
-        return [EventPersistenceMapper.to_domain(model) for model in models]
