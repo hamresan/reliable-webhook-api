@@ -19,3 +19,7 @@ __all__ = [
     "create_database_engine",
     "create_session_factory",
 ]
+
+from reliable_webhook_api.infrastructure.persistence.sqlalchemy_event_query import SqlAlchemyEventQuery
+
+__all__ = [*__all__, "SqlAlchemyEventQuery"]
