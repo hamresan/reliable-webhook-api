@@ -95,7 +95,7 @@ async def test_returns_stable_duplicate_result_without_second_add() -> None:
 
 
 @pytest.mark.parametrize(
-    "request",
+    "receipt_input",
     [
         make_request(event_type="   "),
         make_request(occurred_at=datetime(2026, 9, 24, 12, 0)),
@@ -107,14 +107,14 @@ async def test_returns_stable_duplicate_result_without_second_add() -> None:
     ],
 )
 async def test_rejects_invalid_envelope_after_signature_verification(
-    request: ReceiveWebhookEventInput,
+    receipt_input: ReceiveWebhookEventInput,
 ) -> None:
     repository = InMemoryEventRepository()
     verifier = FakeSignatureVerifier(True)
     use_case = make_use_case(repository, verifier)
 
     with pytest.raises(ValidationError, match="Invalid webhook event envelope"):
-        await use_case.execute(request)
+        await use_case.execute(receipt_input)
 
     assert verifier.calls
     assert repository.add_calls == 0
