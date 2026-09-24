@@ -31,11 +31,13 @@ def make_request(
     signature: str | None = "signature",
     event_type: str = "invoice.paid",
     occurred_at: datetime = NOW,
+    event: EventInput | None = None,
 ) -> ReceiveWebhookEventInput:
     return ReceiveWebhookEventInput(
         raw_payload=b'{"exact":"bytes"}',
         signature=signature,
-        event=EventInput(
+        event=event
+        or EventInput(
             event_id=EVENT_ID,
             event_type=event_type,
             occurred_at=occurred_at,
@@ -97,15 +99,24 @@ async def test_returns_stable_duplicate_result_without_second_add() -> None:
     [
         make_request(event_type="   "),
         make_request(occurred_at=datetime(2026, 9, 24, 12, 0)),
+        ReceiveWebhookEventInput(
+            raw_payload=b"not-json",
+            signature="signature",
+            event=None,
+        ),
     ],
 )
-async def test_rejects_invalid_envelope(request: ReceiveWebhookEventInput) -> None:
+async def test_rejects_invalid_envelope_after_signature_verification(
+    request: ReceiveWebhookEventInput,
+) -> None:
     repository = InMemoryEventRepository()
-    use_case = make_use_case(repository, FakeSignatureVerifier(True))
+    verifier = FakeSignatureVerifier(True)
+    use_case = make_use_case(repository, verifier)
 
     with pytest.raises(ValidationError, match="Invalid webhook event envelope"):
         await use_case.execute(request)
 
+    assert verifier.calls
     assert repository.add_calls == 0
 
 
