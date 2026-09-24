@@ -36,6 +36,7 @@ async def test_api_uses_real_repository_and_dependency_wiring(
         "X-Webhook-Signature": sign(SECRET, payload),
     }
     app = create_app()
+    engine = get_database_engine()
 
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -53,3 +54,8 @@ async def test_api_uses_real_repository_and_dependency_wiring(
 
     assert len(events) == 1
     assert events[0].id.value == EVENT_ID
+
+    await engine.dispose()
+    get_database_engine.cache_clear()
+    get_session_factory.cache_clear()
+    get_settings.cache_clear()
