@@ -34,6 +34,7 @@ packages = ["src/reliable_webhook_api"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+addopts = "-ra"
 
 [tool.ruff]
 target-version = "py312"
@@ -47,3 +48,11 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 include = ["src", "tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["csv_data_cleaner"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
