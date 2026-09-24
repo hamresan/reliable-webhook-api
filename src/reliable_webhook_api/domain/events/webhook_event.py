@@ -17,9 +17,7 @@ class WebhookEvent:
     payload: dict[str, Any]
     status: EventStatus
     received_at: datetime
-    attempts: list[ProcessingAttempt] = field(
-        default_factory=lambda: list[ProcessingAttempt]()
-    )
+    attempts: list[ProcessingAttempt] = field(default_factory=lambda: list[ProcessingAttempt]())
     failure_reason: FailureReason | None = None
 
     def __post_init__(self) -> None:
