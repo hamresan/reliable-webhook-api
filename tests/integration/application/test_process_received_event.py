@@ -111,7 +111,7 @@ async def test_processing_failure_and_attempt_are_persisted(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     await persist_received_event(session_factory)
-    processor = RecordingProcessor(RuntimeError("provider unavailable"))
+    processor = RecordingProcessor(RuntimeError("Event processor failed."))
 
     status = await process(session_factory, processor)
 
@@ -120,7 +120,7 @@ async def test_processing_failure_and_attempt_are_persisted(
     assert persisted.status is EventStatus.FAILED
     assert persisted.failure_reason is not None
     assert persisted.failure_reason.code.value == "processor_error"
-    assert persisted.failure_reason.message.value == "provider unavailable"
+    assert persisted.failure_reason.message.value == "Event processor failed."
     assert len(persisted.attempts) == 1
     assert persisted.attempts[0].failure_reason == persisted.failure_reason
     assert processor.calls == 1
