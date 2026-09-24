@@ -7,7 +7,7 @@ run:
 	uv run uvicorn reliable_webhook_api.presentation.api.app:app --reload
 
 test:
-	uv run pytest --cov=src --cov-report=term-missing
+	uv run pytest --cov=src --cov-report=term-missing --cov-report=term
 
 lint:
 	uv run ruff check src tests
