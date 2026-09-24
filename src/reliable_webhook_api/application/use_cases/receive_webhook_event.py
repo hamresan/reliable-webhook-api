@@ -53,7 +53,11 @@ class ReceiveWebhookEvent:
             async with self._unit_of_work:
                 existing = await self._repository.get(event_id)
                 if existing is not None:
-                    return self._duplicate_output(existing)
+                    return EventOutput(
+                        event_id=existing.id.value,
+                        status=existing.status,
+                        duplicate=True,
+                    )
 
                 event = WebhookEvent(
                     id=event_id,
@@ -68,10 +72,10 @@ class ReceiveWebhookEvent:
             existing = await self._repository.get(event_id)
             if existing is None:
                 raise
-            return self._duplicate_output(existing)
+            return EventOutput(
+                event_id=existing.id.value,
+                status=existing.status,
+                duplicate=True,
+            )
 
         return EventOutput(event_id=event.id.value, status=event.status, duplicate=False)
-
-    @staticmethod
-    def _duplicate_output(event: WebhookEvent) -> EventOutput:
-        return EventOutput(event_id=event.id.value, status=event.status, duplicate=True)
