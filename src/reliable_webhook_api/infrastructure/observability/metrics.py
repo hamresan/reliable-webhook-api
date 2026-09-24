@@ -1,13 +1,10 @@
 from collections import Counter
 from functools import lru_cache
-from typing import Protocol
+
+from reliable_webhook_api.application.ports import Metrics
 
 
-class MetricsPort(Protocol):
-    def increment(self, name: str) -> None: ...
-
-
-class InMemoryMetrics(MetricsPort):
+class InMemoryMetrics(Metrics):
     """Minimal replaceable metrics hook suitable for local and test use."""
 
     def __init__(self) -> None:
