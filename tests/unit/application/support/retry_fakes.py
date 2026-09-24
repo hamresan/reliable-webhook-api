@@ -47,9 +47,12 @@ class FakeDueRetryReader(DueRetryReader):
 
 
 class FakeProcessingRunner(EventProcessingRunner):
-    def __init__(self) -> None:
+    def __init__(self, error: Exception | None = None) -> None:
         self.event_ids: list[EventId] = []
+        self.error = error
 
     async def process(self, event_id: EventId) -> ProcessEventOutput:
         self.event_ids.append(event_id)
+        if self.error is not None:
+            raise self.error
         return ProcessEventOutput(event_id=event_id.value, status=EventStatus.PROCESSED)
