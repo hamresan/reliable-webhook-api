@@ -1,4 +1,4 @@
-.PHONY: install run test coverage lint format format-check typecheck check up down
+.PHONY: install run test coverage lint format format-check typecheck check migrate migrate-down up down
 
 install:
 	uv sync
@@ -25,6 +25,12 @@ typecheck:
 	uv run pyright src tests
 
 check: lint format-check typecheck coverage
+
+migrate:
+	uv run alembic upgrade head
+
+migrate-down:
+	uv run alembic downgrade base
 
 up:
 	docker compose up --build -d
