@@ -31,6 +31,7 @@ class SqlAlchemyEventRepository(EventRepository):
         try:
             await self._session.flush()
         except IntegrityError as exc:
+            await self._session.rollback()
             raise DuplicateEventError("Webhook event already exists.") from exc
 
     async def save(self, event: WebhookEvent) -> None:
