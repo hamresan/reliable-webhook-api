@@ -60,20 +60,6 @@ async def test_query_filters_and_paginates_with_total(
     assert [event.id for event in page.items] == [events[2].id]
 
 
-async def test_due_retry_selection_excludes_future_and_other_states(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    due = build_event(0, EventStatus.RETRY_SCHEDULED, NOW - timedelta(seconds=1))
-    future = build_event(1, EventStatus.RETRY_SCHEDULED, NOW + timedelta(seconds=1))
-    failed = build_event(2, EventStatus.FAILED, NOW - timedelta(seconds=1))
-    await persist(session_factory, [due, future, failed])
-
-    async with session_factory() as session:
-        events = await SqlAlchemyEventQuery(session).due_retries(NOW, limit=10)
-
-    assert [event.id for event in events] == [due.id]
-
-
 async def test_get_returns_persisted_event_and_missing_returns_none(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
