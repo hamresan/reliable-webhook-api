@@ -1,10 +1,14 @@
 from reliable_webhook_api.application.dto import EventOutput, ReceiveWebhookEventInput
-from reliable_webhook_api.application.errors import InvalidSignatureError, ValidationError
+from reliable_webhook_api.application.errors import (
+    DuplicateEventError,
+    InvalidSignatureError,
+    ValidationError,
+)
 from reliable_webhook_api.application.ports import (
     Clock,
     EventRepository,
     SignatureVerifier,
-    Transaction,
+    UnitOfWork,
 )
 from reliable_webhook_api.domain import (
     EventId,
@@ -22,12 +26,12 @@ class ReceiveWebhookEvent:
         repository: EventRepository,
         signature_verifier: SignatureVerifier,
         clock: Clock,
-        transaction: Transaction,
+        unit_of_work: UnitOfWork,
     ) -> None:
         self._repository = repository
         self._signature_verifier = signature_verifier
         self._clock = clock
-        self._transaction = transaction
+        self._unit_of_work = unit_of_work
 
     async def execute(self, request: ReceiveWebhookEventInput) -> EventOutput:
         signature = request.signature
@@ -45,23 +49,29 @@ class ReceiveWebhookEvent:
         except ValueError as exc:
             raise ValidationError("Invalid webhook event envelope.") from exc
 
-        async with self._transaction:
-            existing = await self._repository.get(event_id)
-            if existing is not None:
-                return EventOutput(
-                    event_id=existing.id.value,
-                    status=existing.status,
-                    duplicate=True,
-                )
+        try:
+            async with self._unit_of_work:
+                existing = await self._repository.get(event_id)
+                if existing is not None:
+                    return self._duplicate_output(existing)
 
-            event = WebhookEvent(
-                id=event_id,
-                event_type=event_type,
-                occurred_at=occurred_at,
-                data=event_input.data,
-                status=EventStatus.RECEIVED,
-                received_at=ReceivedAt(self._clock.now()),
-            )
-            await self._repository.add(event)
+                event = WebhookEvent(
+                    id=event_id,
+                    event_type=event_type,
+                    occurred_at=occurred_at,
+                    data=event_input.data,
+                    status=EventStatus.RECEIVED,
+                    received_at=ReceivedAt(self._clock.now()),
+                )
+                await self._repository.add(event)
+        except DuplicateEventError:
+            existing = await self._repository.get(event_id)
+            if existing is None:
+                raise
+            return self._duplicate_output(existing)
 
         return EventOutput(event_id=event.id.value, status=event.status, duplicate=False)
+
+    @staticmethod
+    def _duplicate_output(event: WebhookEvent) -> EventOutput:
+        return EventOutput(event_id=event.id.value, status=event.status, duplicate=True)
