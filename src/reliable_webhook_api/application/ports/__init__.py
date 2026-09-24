@@ -5,6 +5,7 @@ from reliable_webhook_api.application.ports.event_processing_runner import Event
 from reliable_webhook_api.application.ports.event_processor import EventProcessor
 from reliable_webhook_api.application.ports.event_query import EventPage, EventQuery
 from reliable_webhook_api.application.ports.event_repository import EventRepository
+from reliable_webhook_api.application.ports.metrics import Metrics
 from reliable_webhook_api.application.ports.retry_scheduler import RetryScheduler
 from reliable_webhook_api.application.ports.signature_verifier import SignatureVerifier
 from reliable_webhook_api.application.ports.unit_of_work import UnitOfWork
@@ -18,6 +19,7 @@ __all__ = [
     "EventProcessor",
     "EventQuery",
     "EventRepository",
+    "Metrics",
     "RetryScheduler",
     "SignatureVerifier",
     "UnitOfWork",
