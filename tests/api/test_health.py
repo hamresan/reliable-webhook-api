@@ -1,6 +1,3 @@
-from collections.abc import Coroutine
-from typing import Any
-
 from httpx import ASGITransport, AsyncClient
 
 from reliable_webhook_api.infrastructure.health import DatabaseReadinessChecker
