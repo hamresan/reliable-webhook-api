@@ -28,7 +28,8 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
         reason="PostgreSQL integration tests require TEST_DATABASE_URL.",
     )
     for item in items:
-        item.add_marker(skip_postgres)
+        if item.nodeid.startswith("tests/integration/"):
+            item.add_marker(skip_postgres)
 
 
 @pytest.fixture(scope="session", autouse=True)
