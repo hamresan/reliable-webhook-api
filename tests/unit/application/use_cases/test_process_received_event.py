@@ -4,6 +4,7 @@ from uuid import UUID
 import pytest
 
 from reliable_webhook_api.application.errors import NotFoundError
+from reliable_webhook_api.application.processing import ProcessingFailureMapper
 from reliable_webhook_api.application.ports import EventProcessor
 from reliable_webhook_api.application.use_cases.process_received_event import ProcessReceivedEvent
 from reliable_webhook_api.domain import (
@@ -54,6 +55,7 @@ async def test_processes_received_event_once_and_records_successful_attempt() ->
         FakeClock(NOW + timedelta(seconds=1)),
         FakeUnitOfWork(),
         EventTransitionPolicy(),
+        ProcessingFailureMapper(),
     )
 
     result = await use_case.execute(EVENT_ID)
@@ -76,6 +78,7 @@ async def test_processor_failure_marks_failed_and_records_safe_attempt() -> None
         FakeClock(NOW + timedelta(seconds=1)),
         FakeUnitOfWork(),
         EventTransitionPolicy(),
+        ProcessingFailureMapper(),
     )
 
     result = await use_case.execute(EVENT_ID)
@@ -97,6 +100,7 @@ async def test_missing_event_is_not_processed() -> None:
         FakeClock(NOW),
         FakeUnitOfWork(),
         EventTransitionPolicy(),
+        ProcessingFailureMapper(),
     )
 
     with pytest.raises(NotFoundError):
