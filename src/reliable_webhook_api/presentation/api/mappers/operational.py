@@ -15,9 +15,7 @@ class OperationalResponseMapper:
                     "number": attempt.number,
                     "started_at": attempt.started_at.isoformat(),
                     "finished_at": (
-                        attempt.finished_at.isoformat()
-                        if attempt.finished_at is not None
-                        else None
+                        attempt.finished_at.isoformat() if attempt.finished_at is not None else None
                     ),
                     "failure_code": attempt.failure_code,
                 }
