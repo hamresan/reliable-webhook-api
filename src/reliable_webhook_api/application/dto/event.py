@@ -18,7 +18,7 @@ class EventInput:
 class ReceiveWebhookEventInput:
     raw_payload: bytes
     signature: str | None
-    event: EventInput
+    event: EventInput | None
 
 
 @dataclass(frozen=True, slots=True)
