@@ -38,4 +38,3 @@ class SqlAlchemyEventQuery(EventQuery):
             items=[EventPersistenceMapper.to_domain(model) for model in models],
             total=total or 0,
         )
-
