@@ -23,7 +23,8 @@ class EventModel(Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    attempts: Mapped[list["ProcessingAttemptModel"]] = relationship(
+    attempts: Mapped[list[Any]] = relationship(
+        "ProcessingAttemptModel",
         back_populates="event",
         cascade="all, delete-orphan",
         order_by="ProcessingAttemptModel.number",
