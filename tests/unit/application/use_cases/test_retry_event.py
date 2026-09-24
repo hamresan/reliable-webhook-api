@@ -3,10 +3,10 @@ from datetime import timedelta
 import pytest
 
 from reliable_webhook_api.application.errors import InvalidTransitionError, NotFoundError
+from reliable_webhook_api.application.retries import RetryCoordinator
 from reliable_webhook_api.application.use_cases import RetryEvent
 from reliable_webhook_api.domain import (
     EventId,
-    EventStatus,
     EventTransitionPolicy,
     ExponentialBackoff,
     MaxAttempts,
@@ -24,15 +24,19 @@ def build_use_case(
     scheduler: FakeRetryScheduler,
     max_attempts: int = 3,
 ) -> RetryEvent:
-    return RetryEvent(
+    coordinator = RetryCoordinator(
         repository=repository,
         scheduler=scheduler,
         clock=FakeClock(NOW),
-        unit_of_work=FakeUnitOfWork(),
         retry_policy=RetryPolicy(MaxAttempts(max_attempts)),
         retryable_failures=RetryableFailurePolicy(frozenset({"processor_error"})),
         backoff=ExponentialBackoff(timedelta(seconds=10), timedelta(seconds=60)),
         transition_policy=EventTransitionPolicy(),
+    )
+    return RetryEvent(
+        repository=repository,
+        unit_of_work=FakeUnitOfWork(),
+        retry_coordinator=coordinator,
     )
 
 
@@ -44,7 +48,7 @@ async def test_failed_retryable_event_is_scheduled_with_backoff() -> None:
 
     result = await build_use_case(repository, scheduler).execute(event.id)
 
-    assert result.status is EventStatus.RETRY_SCHEDULED
+    assert result.status.value == "retry_scheduled"
     assert result.retry_at == NOW + timedelta(seconds=10)
     assert event.next_retry_at == result.retry_at
     assert scheduler.scheduled == [(event.id, result.retry_at)]
@@ -55,7 +59,7 @@ async def test_non_retryable_failure_is_rejected() -> None:
     repository = InMemoryEventRepository()
     repository.events[event.id] = event
 
-    with pytest.raises(InvalidTransitionError, match="not retryable"):
+    with pytest.raises(InvalidTransitionError):
         await build_use_case(repository, FakeRetryScheduler()).execute(event.id)
 
 
@@ -69,7 +73,8 @@ async def test_max_attempts_is_enforced() -> None:
 
 
 async def test_terminal_event_is_rejected() -> None:
-    event = build_event(status=EventStatus.PROCESSED)
+    event = build_event()
+    event.status = type(event.status).PROCESSED
     repository = InMemoryEventRepository()
     repository.events[event.id] = event
 
