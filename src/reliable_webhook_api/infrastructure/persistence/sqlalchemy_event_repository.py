@@ -82,6 +82,21 @@ class SqlAlchemyEventRepository(EventRepository):
             return None
         return await self.get(event_id)
 
+    async def schedule_retry(self, event_id: EventId, due_at: datetime) -> None:
+        await self._session.execute(
+            update(EventModel)
+            .where(
+                EventModel.event_id == event_id.value,
+                EventModel.status == EventStatus.FAILED.value,
+            )
+            .values(
+                status=EventStatus.RETRY_SCHEDULED.value,
+                next_retry_at=due_at,
+                version=EventModel.version + 1,
+                updated_at=datetime.now(UTC),
+            )
+        )
+
     async def list(self, status: EventStatus | None = None) -> list[WebhookEvent]:
         statement = select(EventModel).options(selectinload(EventModel.attempts))
         if status is not None:
