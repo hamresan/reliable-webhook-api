@@ -2,7 +2,7 @@
 
 > A provider-neutral FastAPI service being built stage by stage to receive signed webhook events reliably.
 
-**Current status:** Stage 5 — bounded retries and operational API.
+**Current status:** Stage 6 — production-readiness hardening.
 
 The service accepts and persists generic signed webhook events, records deterministic processing outcomes, and exposes operational inspection and bounded manual retry scheduling. PostgreSQL remains the idempotency authority.
 
@@ -20,6 +20,8 @@ src/reliable_webhook_api/
 ├── domain/
 ├── infrastructure/
 │   ├── clock/
+│   ├── health/
+│   ├── observability/
 │   ├── persistence/
 │   │   └── models/
 │   ├── scheduling/
@@ -28,6 +30,7 @@ src/reliable_webhook_api/
 └── presentation/
     └── api/
         ├── dependencies/
+        ├── middleware/
         ├── routes/
         └── schemas/
 ```
@@ -91,6 +94,14 @@ Expected response:
 {"status":"ok"}
 ```
 
+Readiness checks database connectivity separately:
+
+```bash
+curl http://localhost:8000/ready
+```
+
+A ready service returns `{"status":"ready"}`. Database unavailability returns `503` without exposing database details.
+
 ## Webhook receipt
 
 Configure:
@@ -99,6 +110,8 @@ Configure:
 APP_WEBHOOK_SECRET=replace-with-local-secret
 APP_WEBHOOK_SIGNATURE_HEADER=X-Webhook-Signature
 APP_DATABASE_URL=postgresql+asyncpg://webhook:webhook@localhost:5432/webhook
+APP_LOGGING_LEVEL=INFO
+APP_MAX_PAYLOAD_BYTES=1048576
 ```
 
 The signature is the lowercase hexadecimal HMAC-SHA256 digest of the **exact HTTP request body bytes** using `APP_WEBHOOK_SECRET`.
@@ -175,7 +188,8 @@ uv run pytest --cov=src --cov-report=term-missing
 
 Available now:
 
-- `GET /health`
+- `GET /health` — liveness only.
+- `GET /ready` — readiness with database connectivity.
 - `POST /webhooks/events`
 - `GET /events/{event_id}` — inspect status, attempts, timestamps, and sanitized failure metadata.
 - `GET /events?status=failed&offset=0&limit=50` — filter and paginate operational events.
@@ -218,7 +232,25 @@ A scheduled retry is persisted as `retry_scheduled` with `next_retry_at`. Run du
 uv run python -m reliable_webhook_api.presentation.cli.retry_worker
 ```
 
+To run the optional local worker alongside Compose:
+
+```bash
+docker compose --profile worker up --build
+```
+
 The worker selects only due scheduled events and delegates orchestration to the application use case. Processing uses an atomic PostgreSQL status claim, so concurrent workers cannot both execute the processor for the same claim. A stale due-event selection is skipped safely if another worker has already claimed it. External exactly-once delivery across arbitrary downstream systems is not claimed.
+
+## Deployment and security assumptions
+
+- Production requires an explicit webhook secret and database URL; invalid retry bounds fail configuration validation.
+- The API enforces a configurable request payload limit before webhook processing.
+- Every response carries an `X-Request-ID`; callers may supply one, otherwise the API generates it. Request logs include method, path, status, and correlation ID, not raw webhook payloads or signatures.
+- Basic metrics hooks are intentionally library-neutral so a deployment can replace the local counter adapter with Prometheus/OpenTelemetry integration without changing domain code.
+- TLS termination is expected at a trusted reverse proxy or ingress. This application does not terminate public TLS itself.
+- Operational endpoints are intentionally unauthenticated in v0.1.0 and must be protected by deployment/network controls where required.
+- Rate limiting should be enforced at the reverse proxy/API gateway. The application-level payload limit is not a substitute for edge rate limiting.
+- Persisted webhook payloads may contain business-sensitive data. Define retention/deletion policy appropriate to the deployment and database backups.
+- CORS is not enabled because the current service has no browser frontend requirement.
 
 ## License
 
