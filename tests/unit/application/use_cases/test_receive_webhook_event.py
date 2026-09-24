@@ -14,10 +14,10 @@ from reliable_webhook_api.domain import (
     ReceivedAt,
     WebhookEvent,
 )
+from tests.support.fake_unit_of_work import FakeUnitOfWork
 from tests.unit.application.use_cases.fakes import (
     FakeClock,
     FakeSignatureVerifier,
-    FakeUnitOfWork,
     InMemoryEventRepository,
 )
 
