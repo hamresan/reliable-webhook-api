@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 
 class DatabaseReadinessChecker:
-    """Checks database connectivity without leaking persistence details upstream."""
+    """Checks database connectivity without exposing persistence details upstream."""
 
     def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
