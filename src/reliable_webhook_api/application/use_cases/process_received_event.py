@@ -1,5 +1,6 @@
 from reliable_webhook_api.application.dto.process_event import ProcessEventOutput
 from reliable_webhook_api.application.errors import InvalidTransitionError, NotFoundError
+from reliable_webhook_api.application.processing import ProcessingFailureMapper
 from reliable_webhook_api.application.ports import (
     Clock,
     EventProcessor,
@@ -11,8 +12,6 @@ from reliable_webhook_api.domain import (
     EventId,
     EventStatus,
     EventTransitionPolicy,
-    FailureCode,
-    FailureMessage,
     FailureReason,
     ProcessingAttempt,
     ProcessingPeriod,
@@ -28,12 +27,14 @@ class ProcessReceivedEvent:
         clock: Clock,
         unit_of_work: UnitOfWork,
         transition_policy: EventTransitionPolicy,
+        failure_mapper: ProcessingFailureMapper,
     ) -> None:
         self._repository = repository
         self._processor = processor
         self._clock = clock
         self._unit_of_work = unit_of_work
         self._transition_policy = transition_policy
+        self._failure_mapper = failure_mapper
 
     async def execute(self, event_id: EventId) -> ProcessEventOutput:
         async with self._unit_of_work:
@@ -56,10 +57,7 @@ class ProcessReceivedEvent:
                 target_status = EventStatus.PROCESSED
             except Exception as exc:
                 target_status = EventStatus.FAILED
-                failure_reason = FailureReason(
-                    FailureCode("processor_error"),
-                    FailureMessage(str(exc) or "Event processor failed."),
-                )
+                failure_reason = self._failure_mapper.from_exception(exc)
 
             finished_at = ProcessingTimestamp(self._clock.now())
             self._transition_policy.ensure_allowed(event.status, target_status)
