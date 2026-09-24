@@ -1,9 +1,8 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from reliable_webhook_api.application.errors import InvalidTransitionError
 from reliable_webhook_api.application.processing import ProcessingFailureMapper
