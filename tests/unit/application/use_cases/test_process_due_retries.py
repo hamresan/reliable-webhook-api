@@ -11,7 +11,6 @@ async def test_processes_only_due_retry_events() -> None:
     due = build_event(status=EventStatus.RETRY_SCHEDULED)
     due.next_retry_at = NOW
     future = build_event(status=EventStatus.RETRY_SCHEDULED)
-    future.id = type(future.id)(future.id.value)
     future.next_retry_at = NOW + timedelta(minutes=1)
     command = FakeProcessingCommand()
 
