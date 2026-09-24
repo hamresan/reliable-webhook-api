@@ -31,6 +31,9 @@ class ReceiveWebhookEvent:
             raise InvalidSignatureError("Invalid webhook signature.")
 
         event_input = request.event
+        if event_input is None:
+            raise ValidationError("Invalid webhook event envelope.")
+
         try:
             event_id = EventId(event_input.event_id)
             event_type = EventType(event_input.event_type)
