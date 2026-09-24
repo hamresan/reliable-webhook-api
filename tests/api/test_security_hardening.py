@@ -1,7 +1,6 @@
 import json
 from uuid import uuid4
 
-from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from reliable_webhook_api.presentation.api.app import create_app
@@ -48,7 +47,7 @@ async def test_invalid_signature_response_does_not_echo_signature_or_payload() -
 
 
 async def test_unhandled_errors_do_not_include_debug_trace() -> None:
-    app = FastAPI(debug=False)
+    app = create_app()
 
     @app.get("/boom")
     async def boom() -> None:
