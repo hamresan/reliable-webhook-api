@@ -1,4 +1,4 @@
-.PHONY: install run test lint format format-check typecheck check
+.PHONY: install run test lint format format-check typecheck check up down
 
 install:
 	uv sync
@@ -22,3 +22,9 @@ typecheck:
 	uv run pyright src tests
 
 check: lint format-check typecheck test
+
+up:
+	docker compose up --build -d
+
+down:
+	docker compose down --rmi local --remove-orphans
