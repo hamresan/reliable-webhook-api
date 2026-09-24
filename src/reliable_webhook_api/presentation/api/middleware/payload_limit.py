@@ -1,14 +1,21 @@
+from collections.abc import Awaitable, Callable
+from typing import Any
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 
 class PayloadSizeLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, max_payload_bytes: int) -> None:
+    def __init__(self, app: Any, max_payload_bytes: int) -> None:
         super().__init__(app)
         self._max_payload_bytes = max_payload_bytes
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         if request.method in {"POST", "PUT", "PATCH"}:
             content_length = request.headers.get("content-length")
             if content_length is not None:
