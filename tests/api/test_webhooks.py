@@ -1,12 +1,11 @@
 from uuid import UUID
 
 from httpx import ASGITransport, AsyncClient
-from tests.api.support import build_receive_use_case, sign
-
 from reliable_webhook_api.config import get_settings
 from reliable_webhook_api.infrastructure.persistence import InMemoryEventRepository
 from reliable_webhook_api.presentation.api.app import create_app
 from reliable_webhook_api.presentation.api.dependencies import get_receive_webhook_event
+from tests.api.support import build_receive_use_case, sign
 
 SECRET = "stage-two-test-secret"
 EVENT_ID = UUID("00000000-0000-0000-0000-000000000001")
