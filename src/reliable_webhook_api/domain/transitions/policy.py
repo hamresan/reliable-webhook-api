@@ -6,7 +6,8 @@ class EventTransitionPolicy:
     _allowed: dict[EventStatus, frozenset[EventStatus]] = {
         EventStatus.RECEIVED: frozenset({EventStatus.PROCESSING}),
         EventStatus.PROCESSING: frozenset({EventStatus.PROCESSED, EventStatus.FAILED}),
-        EventStatus.FAILED: frozenset({EventStatus.PROCESSING, EventStatus.DEAD_LETTER}),
+        EventStatus.FAILED: frozenset({EventStatus.RETRY_SCHEDULED, EventStatus.DEAD_LETTER}),
+        EventStatus.RETRY_SCHEDULED: frozenset({EventStatus.PROCESSING}),
         EventStatus.PROCESSED: frozenset(),
         EventStatus.DEAD_LETTER: frozenset(),
     }
