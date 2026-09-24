@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from reliable_webhook_api.domain import EventStatus
 
@@ -36,9 +36,3 @@ class RetryResponse(BaseModel):
     event_id: UUID
     status: EventStatus
     retry_at: datetime
-
-
-class EventListQuery(BaseModel):
-    status: EventStatus | None = None
-    offset: int = Field(default=0, ge=0)
-    limit: int = Field(default=50, ge=1, le=100)
