@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, ge=1, le=65535)
     webhook_secret: str = ""
     webhook_signature_header: str = "X-Webhook-Signature"
+    database_url: str = "postgresql+asyncpg://webhook:webhook@localhost:5432/webhook"
 
     model_config = SettingsConfigDict(
         env_prefix="APP_",
