@@ -9,9 +9,9 @@ from reliable_webhook_api.domain.processing import (
 from reliable_webhook_api.domain.retries import (
     ExponentialBackoff,
     MaxAttempts,
+    RetryableFailurePolicy,
     RetryNotAllowedError,
     RetryPolicy,
-    RetryableFailurePolicy,
 )
 from reliable_webhook_api.domain.statuses import EventStatus
 from reliable_webhook_api.domain.transitions import (
