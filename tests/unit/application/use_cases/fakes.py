@@ -1,11 +1,8 @@
 from datetime import datetime
-from types import TracebackType
-
 from reliable_webhook_api.application.ports import (
     Clock,
     EventRepository,
     SignatureVerifier,
-    UnitOfWork,
 )
 from reliable_webhook_api.domain import EventId, EventStatus, WebhookEvent
 
@@ -48,16 +45,3 @@ class InMemoryEventRepository(EventRepository):
         if status is None:
             return events
         return [event for event in events if event.status is status]
-
-
-class FakeUnitOfWork(UnitOfWork):
-    async def __aenter__(self) -> "FakeUnitOfWork":
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> bool | None:
-        return None
