@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from reliable_webhook_api.application.errors import InvalidTransitionError
 from reliable_webhook_api.application.use_cases import ProcessDueRetries
 from reliable_webhook_api.domain import EventStatus
 from tests.unit.application.support import (
@@ -25,4 +26,19 @@ async def test_processes_only_due_retry_events() -> None:
     ).execute()
 
     assert count == 1
+    assert runner.event_ids == [due.id]
+
+
+async def test_stale_due_event_claim_is_skipped_safely() -> None:
+    due = build_event(status=EventStatus.RETRY_SCHEDULED)
+    due.next_retry_at = NOW
+    runner = FakeProcessingRunner(InvalidTransitionError("already claimed"))
+
+    count = await ProcessDueRetries(
+        FakeDueRetryReader([due]),
+        runner,
+        FakeClock(NOW),
+    ).execute()
+
+    assert count == 0
     assert runner.event_ids == [due.id]
