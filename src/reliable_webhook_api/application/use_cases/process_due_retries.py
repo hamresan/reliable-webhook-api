@@ -1,9 +1,13 @@
-from reliable_webhook_api.application.ports import Clock, EventQuery
-from reliable_webhook_api.application.use_cases.process_received_event import ProcessReceivedEvent
+from reliable_webhook_api.application.ports import Clock, EventProcessingCommand, EventQuery
 
 
 class ProcessDueRetries:
-    def __init__(self, query: EventQuery, processor: ProcessReceivedEvent, clock: Clock) -> None:
+    def __init__(
+        self,
+        query: EventQuery,
+        processor: EventProcessingCommand,
+        clock: Clock,
+    ) -> None:
         self._query = query
         self._processor = processor
         self._clock = clock
