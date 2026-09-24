@@ -7,6 +7,7 @@ from reliable_webhook_api.application.retries import RetryCoordinator
 from reliable_webhook_api.application.use_cases import RetryEvent
 from reliable_webhook_api.domain import (
     EventId,
+    EventStatus,
     EventTransitionPolicy,
     ExponentialBackoff,
     MaxAttempts,
@@ -74,7 +75,7 @@ async def test_max_attempts_is_enforced() -> None:
 
 async def test_terminal_event_is_rejected() -> None:
     event = build_event()
-    event.status = type(event.status).PROCESSED
+    event.status = EventStatus.PROCESSED
     repository = InMemoryEventRepository()
     repository.events[event.id] = event
 
