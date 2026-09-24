@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError as PydanticValidationError
@@ -10,6 +12,10 @@ from reliable_webhook_api.presentation.api.dependencies import get_receive_webho
 from reliable_webhook_api.presentation.api.schemas import WebhookEventRequest, WebhookEventResponse
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+ReceiveWebhookEventDependency = Annotated[
+    ReceiveWebhookEvent,
+    Depends(get_receive_webhook_event),
+]
 
 
 @router.post(
@@ -23,7 +29,7 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 )
 async def receive_webhook_event(
     request: Request,
-    use_case: ReceiveWebhookEvent = Depends(get_receive_webhook_event),
+    use_case: ReceiveWebhookEventDependency,
 ) -> JSONResponse:
     raw_payload = await request.body()
     signature = request.headers.get(get_settings().webhook_signature_header)
