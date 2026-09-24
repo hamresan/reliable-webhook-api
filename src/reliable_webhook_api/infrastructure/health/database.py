@@ -1,8 +1,10 @@
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from reliable_webhook_api.application.ports import ReadinessChecker
 
-class DatabaseReadinessChecker:
+
+class DatabaseReadinessChecker(ReadinessChecker):
     """Checks database connectivity without exposing persistence details upstream."""
 
     def __init__(self, engine: AsyncEngine) -> None:
