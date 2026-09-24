@@ -14,13 +14,6 @@ from reliable_webhook_api.domain import (
     ReceivedAt,
     WebhookEvent,
 )
-from tests.unit.application.use_cases.fakes import (
-    FakeClock,
-    FakeSignatureVerifier,
-    FakeTransaction,
-    InMemoryEventRepository,
-)
-
 EVENT_ID = UUID("00000000-0000-0000-0000-000000000001")
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
