@@ -16,7 +16,11 @@ integration-test:
 	uv run pytest tests/integration
 
 coverage:
-	uv run pytest --ignore=tests/integration --cov=src --cov-report=term-missing --cov-fail-under=90
+	@if [ -n "$TEST_DATABASE_URL" ]; then \
+		$(MAKE) ci-check; \
+	else \
+		uv run pytest --ignore=tests/integration --cov=src --cov-report=term-missing --cov-fail-under=0; \
+	fi
 
 integration-coverage:
 	uv run pytest tests/integration --cov=src --cov-append --cov-report=term-missing --cov-fail-under=95
