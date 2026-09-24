@@ -3,7 +3,7 @@ import pytest
 from reliable_webhook_api.application.errors import NotFoundError
 from reliable_webhook_api.application.operations import OperationalEventMapper
 from reliable_webhook_api.application.use_cases import GetEvent, ListEvents
-from reliable_webhook_api.domain import EventId, EventStatus
+from reliable_webhook_api.domain import EventStatus
 from tests.unit.application.support import FakeEventQuery, build_event
 
 
