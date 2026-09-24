@@ -10,8 +10,7 @@ from reliable_webhook_api.domain import (
     EventId,
     EventStatus,
     EventType,
-    ExternalEventId,
-    ProviderName,
+    OccurredAt,
     ReceivedAt,
     WebhookEvent,
 )
@@ -65,9 +64,13 @@ async def test_receives_new_event_after_signature_verification() -> None:
 
     result = await use_case.execute(make_request())
 
+    persisted = repository.events[EventId(EVENT_ID)]
     assert result.event_id == EVENT_ID
     assert result.status is EventStatus.RECEIVED
     assert not result.duplicate
+    assert persisted.event_type == EventType("invoice.paid")
+    assert persisted.occurred_at == OccurredAt(NOW)
+    assert persisted.data == {"invoice_id": "inv_1"}
     assert verifier.calls == [(b'{"exact":"bytes"}', "signature")]
     assert repository.add_calls == 1
 
@@ -76,10 +79,9 @@ async def test_returns_stable_duplicate_result_without_second_add() -> None:
     repository = InMemoryEventRepository()
     repository.events[EventId(EVENT_ID)] = WebhookEvent(
         id=EventId(EVENT_ID),
-        provider=ProviderName("generic"),
-        external_event_id=ExternalEventId(str(EVENT_ID)),
         event_type=EventType("invoice.paid"),
-        payload={"data": {"invoice_id": "inv_1"}},
+        occurred_at=OccurredAt(NOW),
+        data={"invoice_id": "inv_1"},
         status=EventStatus.RECEIVED,
         received_at=ReceivedAt(NOW),
     )
