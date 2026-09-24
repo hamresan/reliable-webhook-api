@@ -33,6 +33,7 @@ class EventPersistenceMapper:
             status=event.status.value,
             failure_code=event.failure_reason.code.value if event.failure_reason else None,
             failure_message=event.failure_reason.message.value if event.failure_reason else None,
+            next_retry_at=event.next_retry_at,
             updated_at=updated_at,
             attempts=[
                 EventPersistenceMapper.attempt_to_model(attempt) for attempt in event.attempts
@@ -55,6 +56,7 @@ class EventPersistenceMapper:
                 model.failure_code,
                 model.failure_message,
             ),
+            next_retry_at=model.next_retry_at,
         )
 
     @staticmethod

@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -134,3 +135,21 @@ async def test_unique_event_id_is_translated_to_application_error(
         persisted = await repository.get(event.id)
 
     assert persisted == event
+
+
+async def test_processing_claim_is_atomic_across_workers(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    event = build_event()
+    async with session_factory() as session, SqlAlchemyUnitOfWork(session):
+        await SqlAlchemyEventRepository(session).add(event)
+
+    async def claim() -> WebhookEvent | None:
+        async with session_factory() as session, SqlAlchemyUnitOfWork(session):
+            return await SqlAlchemyEventRepository(session).claim_for_processing(event.id)
+
+    first, second = await asyncio.gather(claim(), claim())
+
+    claimed = [result for result in (first, second) if result is not None]
+    assert len(claimed) == 1
+    assert claimed[0].status is EventStatus.PROCESSING

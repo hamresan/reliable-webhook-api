@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -52,12 +52,50 @@ class SqlAlchemyEventRepository(EventRepository):
         model.status = event.status.value
         model.failure_code = event.failure_reason.code.value if event.failure_reason else None
         model.failure_message = event.failure_reason.message.value if event.failure_reason else None
+        model.next_retry_at = event.next_retry_at
         model.version += 1
         model.updated_at = datetime.now(UTC)
         model.attempts = [
             EventPersistenceMapper.attempt_to_model(attempt) for attempt in event.attempts
         ]
         await self._session.flush()
+
+    async def claim_for_processing(self, event_id: EventId) -> WebhookEvent | None:
+        claim = (
+            update(EventModel)
+            .where(
+                EventModel.event_id == event_id.value,
+                EventModel.status.in_(
+                    [EventStatus.RECEIVED.value, EventStatus.RETRY_SCHEDULED.value]
+                ),
+            )
+            .values(
+                status=EventStatus.PROCESSING.value,
+                next_retry_at=None,
+                version=EventModel.version + 1,
+                updated_at=datetime.now(UTC),
+            )
+            .returning(EventModel.event_id)
+        )
+        claimed_id = await self._session.scalar(claim)
+        if claimed_id is None:
+            return None
+        return await self.get(event_id)
+
+    async def schedule_retry(self, event_id: EventId, due_at: datetime) -> None:
+        await self._session.execute(
+            update(EventModel)
+            .where(
+                EventModel.event_id == event_id.value,
+                EventModel.status == EventStatus.FAILED.value,
+            )
+            .values(
+                status=EventStatus.RETRY_SCHEDULED.value,
+                next_retry_at=due_at,
+                version=EventModel.version + 1,
+                updated_at=datetime.now(UTC),
+            )
+        )
 
     async def list(self, status: EventStatus | None = None) -> list[WebhookEvent]:
         statement = select(EventModel).options(selectinload(EventModel.attempts))

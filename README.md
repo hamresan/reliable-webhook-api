@@ -2,9 +2,9 @@
 
 > A provider-neutral FastAPI service being built stage by stage to receive signed webhook events reliably.
 
-**Current status:** Stage 3 — persistence, migrations, and transactional idempotency.
+**Current status:** Stage 5 — bounded retries and operational API.
 
-The service accepts the generic signed webhook envelope from Stage 2 and now persists events through an async SQLAlchemy repository backed by PostgreSQL. Database uniqueness on `event_id` is the final idempotency authority, including concurrent deliveries.
+The service accepts and persists generic signed webhook events, records deterministic processing outcomes, and exposes operational inspection and bounded manual retry scheduling. PostgreSQL remains the idempotency authority.
 
 ## Current architecture
 
@@ -14,6 +14,7 @@ src/reliable_webhook_api/
 │   ├── dto/
 │   ├── errors/
 │   ├── ports/
+│   ├── retries/
 │   └── use_cases/
 ├── config/
 ├── domain/
@@ -21,6 +22,8 @@ src/reliable_webhook_api/
 │   ├── clock/
 │   ├── persistence/
 │   │   └── models/
+│   ├── scheduling/
+│   ├── workers/
 │   └── security/
 └── presentation/
     └── api/
@@ -168,18 +171,54 @@ uv run pytest --cov=src --cov-report=term-missing
 - Tests mirror source structure and integration boundaries.
 - No stage is merged until its quality gate and review are complete.
 
-## Planned API
+## Operational API
 
 Available now:
 
 - `GET /health`
 - `POST /webhooks/events`
+- `GET /events/{event_id}` — inspect status, attempts, timestamps, and sanitized failure metadata.
+- `GET /events?status=failed&offset=0&limit=50` — filter and paginate operational events.
+- `POST /events/{event_id}/retry` — schedule an allowed retry for a failed retryable event.
 
-Later stages add:
+Retry scheduling uses bounded exponential backoff. The default configuration allows three attempts, starts at 30 seconds, and caps the delay at one hour:
 
-- `GET /events/{event_id}`
-- `GET /events?status=...`
-- `POST /events/{event_id}/retry`
+```dotenv
+APP_RETRY_MAX_ATTEMPTS=3
+APP_RETRY_BASE_DELAY_SECONDS=30
+APP_RETRY_MAX_DELAY_SECONDS=3600
+```
+
+Only explicitly classified failure codes are retryable. A retryable processing failure is automatically moved from `failed` to `retry_scheduled` with bounded exponential backoff; manual retry uses the same policy and cannot bypass state rules. Invalid-signature requests are rejected before persistence and therefore cannot enter the retry flow. Processed and dead-letter events are terminal.
+
+Operational examples:
+
+```bash
+curl http://localhost:8000/events/00000000-0000-0000-0000-000000000001
+
+curl "http://localhost:8000/events?status=retry_scheduled&offset=0&limit=50"
+
+curl -X POST \
+  http://localhost:8000/events/00000000-0000-0000-0000-000000000001/retry
+```
+
+A successful retry request returns `202 Accepted`:
+
+```json
+{
+  "event_id": "00000000-0000-0000-0000-000000000001",
+  "status": "retry_scheduled",
+  "retry_at": "2026-09-24T12:00:30Z"
+}
+```
+
+A scheduled retry is persisted as `retry_scheduled` with `next_retry_at`. Run due retries locally with:
+
+```bash
+uv run python -m reliable_webhook_api.presentation.cli.retry_worker
+```
+
+The worker selects only due scheduled events and delegates orchestration to the application use case. Processing uses an atomic PostgreSQL status claim, so concurrent workers cannot both execute the processor for the same claim. A stale due-event selection is skipped safely if another worker has already claimed it. External exactly-once delivery across arbitrary downstream systems is not claimed.
 
 ## License
 

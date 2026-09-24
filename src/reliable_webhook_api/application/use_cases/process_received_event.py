@@ -2,11 +2,13 @@ from reliable_webhook_api.application.dto.process_event import ProcessEventOutpu
 from reliable_webhook_api.application.errors import InvalidTransitionError, NotFoundError
 from reliable_webhook_api.application.ports import (
     Clock,
+    EventProcessingCommand,
     EventProcessor,
     EventRepository,
     UnitOfWork,
 )
 from reliable_webhook_api.application.processing import ProcessingFailureMapper
+from reliable_webhook_api.application.retries import RetryCoordinator
 from reliable_webhook_api.domain import (
     AttemptNumber,
     EventId,
@@ -19,7 +21,7 @@ from reliable_webhook_api.domain import (
 )
 
 
-class ProcessReceivedEvent:
+class ProcessReceivedEvent(EventProcessingCommand):
     def __init__(
         self,
         repository: EventRepository,
@@ -28,6 +30,7 @@ class ProcessReceivedEvent:
         unit_of_work: UnitOfWork,
         transition_policy: EventTransitionPolicy,
         failure_mapper: ProcessingFailureMapper,
+        retry_coordinator: RetryCoordinator,
     ) -> None:
         self._repository = repository
         self._processor = processor
@@ -35,20 +38,18 @@ class ProcessReceivedEvent:
         self._unit_of_work = unit_of_work
         self._transition_policy = transition_policy
         self._failure_mapper = failure_mapper
+        self._retry_coordinator = retry_coordinator
 
     async def execute(self, event_id: EventId) -> ProcessEventOutput:
         async with self._unit_of_work:
-            event = await self._repository.get(event_id)
+            event = await self._repository.claim_for_processing(event_id)
             if event is None:
-                raise NotFoundError("Webhook event was not found.")
-
-            try:
-                self._transition_policy.ensure_allowed(event.status, EventStatus.PROCESSING)
-            except ValueError as exc:
-                raise InvalidTransitionError(str(exc)) from exc
-
-            event.status = EventStatus.PROCESSING
-            await self._repository.save(event)
+                existing = await self._repository.get(event_id)
+                if existing is None:
+                    raise NotFoundError("Webhook event was not found.")
+                raise InvalidTransitionError(
+                    f"Event cannot be claimed for processing from {existing.status.value}."
+                )
 
             started_at = ProcessingTimestamp(self._clock.now())
             failure_reason: FailureReason | None = None
@@ -71,5 +72,8 @@ class ProcessReceivedEvent:
                 )
             )
             await self._repository.save(event)
+
+            if target_status is EventStatus.FAILED:
+                await self._retry_coordinator.schedule_if_allowed(event)
 
         return ProcessEventOutput(event_id=event.id.value, status=event.status)

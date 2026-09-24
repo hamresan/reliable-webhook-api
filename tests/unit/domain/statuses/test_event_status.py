@@ -7,5 +7,6 @@ def test_event_status_exposes_expected_values() -> None:
         "processing",
         "processed",
         "failed",
+        "retry_scheduled",
         "dead_letter",
     }

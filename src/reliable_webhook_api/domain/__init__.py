@@ -6,7 +6,13 @@ from reliable_webhook_api.domain.processing import (
     ProcessingPeriod,
     ProcessingTimestamp,
 )
-from reliable_webhook_api.domain.retries import MaxAttempts, RetryNotAllowedError, RetryPolicy
+from reliable_webhook_api.domain.retries import (
+    ExponentialBackoff,
+    MaxAttempts,
+    RetryableFailurePolicy,
+    RetryNotAllowedError,
+    RetryPolicy,
+)
 from reliable_webhook_api.domain.statuses import EventStatus
 from reliable_webhook_api.domain.transitions import (
     EventTransitionPolicy,
@@ -20,6 +26,7 @@ __all__ = [
     "EventStatus",
     "EventTransitionPolicy",
     "EventType",
+    "ExponentialBackoff",
     "FailureCode",
     "FailureMessage",
     "FailureReason",
@@ -31,6 +38,7 @@ __all__ = [
     "ProcessingTimestamp",
     "RetryNotAllowedError",
     "RetryPolicy",
+    "RetryableFailurePolicy",
     "ReceivedAt",
     "WebhookEvent",
 ]

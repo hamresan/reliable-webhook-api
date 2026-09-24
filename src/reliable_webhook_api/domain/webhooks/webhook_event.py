@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 from reliable_webhook_api.domain.failures import FailureReason
@@ -20,3 +21,4 @@ class WebhookEvent:
     received_at: ReceivedAt
     attempts: list[ProcessingAttempt] = field(default_factory=lambda: list[ProcessingAttempt]())
     failure_reason: FailureReason | None = None
+    next_retry_at: datetime | None = None
