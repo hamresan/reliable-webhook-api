@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -7,14 +7,19 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from reliable_webhook_api.application.errors import InvalidTransitionError
 from reliable_webhook_api.application.ports import EventProcessor
 from reliable_webhook_api.application.processing import ProcessingFailureMapper
+from reliable_webhook_api.application.retries import RetryCoordinator
 from reliable_webhook_api.application.use_cases import ProcessReceivedEvent
 from reliable_webhook_api.domain import (
     EventId,
     EventStatus,
     EventTransitionPolicy,
     EventType,
+    ExponentialBackoff,
+    MaxAttempts,
     OccurredAt,
     ReceivedAt,
+    RetryableFailurePolicy,
+    RetryPolicy,
     WebhookEvent,
 )
 from reliable_webhook_api.infrastructure.clock import SystemClock
@@ -22,6 +27,7 @@ from reliable_webhook_api.infrastructure.persistence import (
     SqlAlchemyEventRepository,
     SqlAlchemyUnitOfWork,
 )
+from reliable_webhook_api.infrastructure.scheduling import InProcessRetryScheduler
 
 EVENT_ID = EventId(UUID("00000000-0000-0000-0000-000000000404"))
 NOW = datetime(2026, 9, 24, 14, 0, tzinfo=UTC)
@@ -72,13 +78,28 @@ async def process(
     processor: RecordingProcessor,
 ) -> EventStatus:
     async with session_factory() as session:
+        repository = SqlAlchemyEventRepository(session)
+        clock = SystemClock()
+        retry_coordinator = RetryCoordinator(
+            repository=repository,
+            scheduler=InProcessRetryScheduler(),
+            clock=clock,
+            retry_policy=RetryPolicy(MaxAttempts(3)),
+            retryable_failures=RetryableFailurePolicy(frozenset({"processor_error"})),
+            backoff=ExponentialBackoff(
+                base_delay=timedelta(seconds=1),
+                max_delay=timedelta(seconds=10),
+            ),
+            transition_policy=EventTransitionPolicy(),
+        )
         use_case = ProcessReceivedEvent(
-            repository=SqlAlchemyEventRepository(session),
+            repository=repository,
             processor=processor,
-            clock=SystemClock(),
+            clock=clock,
             unit_of_work=SqlAlchemyUnitOfWork(session),
             transition_policy=EventTransitionPolicy(),
             failure_mapper=ProcessingFailureMapper(),
+            retry_coordinator=retry_coordinator,
         )
         return (await use_case.execute(EVENT_ID)).status
 
@@ -94,6 +115,7 @@ async def test_processing_success_is_persisted_and_not_processed_twice(
     persisted = await load_event(session_factory)
     assert status is EventStatus.PROCESSED
     assert persisted.status is EventStatus.PROCESSED
+    assert persisted.next_retry_at is not None
     assert len(persisted.attempts) == 1
     assert persisted.attempts[0].failure_reason is None
     assert processor.calls == 1
@@ -116,8 +138,8 @@ async def test_processing_failure_and_attempt_are_persisted(
     status = await process(session_factory, processor)
 
     persisted = await load_event(session_factory)
-    assert status is EventStatus.FAILED
-    assert persisted.status is EventStatus.FAILED
+    assert status is EventStatus.RETRY_SCHEDULED
+    assert persisted.status is EventStatus.RETRY_SCHEDULED
     assert persisted.failure_reason is not None
     assert persisted.failure_reason.code.value == "processor_error"
     assert persisted.failure_reason.message.value == "Event processor failed."
