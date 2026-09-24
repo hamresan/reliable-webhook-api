@@ -43,8 +43,8 @@ def test_production_requires_webhook_secret() -> None:
             environment="production",
             webhook_secret="",
             database_url="postgresql+asyncpg://db",
-            _env_file=None,
-        )  # pyright: ignore[reportCallIssue]
+            _env_file=None,  # pyright: ignore[reportCallIssue]
+        )
 
 
 def test_retry_max_delay_cannot_be_lower_than_base_delay() -> None:
@@ -52,5 +52,5 @@ def test_retry_max_delay_cannot_be_lower_than_base_delay() -> None:
         Settings(
             retry_base_delay_seconds=60,
             retry_max_delay_seconds=30,
-            _env_file=None,
-        )  # pyright: ignore[reportCallIssue]
+            _env_file=None,  # pyright: ignore[reportCallIssue]
+        )
