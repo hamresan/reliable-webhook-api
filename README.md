@@ -1,162 +1,170 @@
 # Reliable Webhook API
 
-> A provider-neutral FastAPI service being built stage by stage to receive signed webhook events reliably.
+A provider-neutral FastAPI service for reliably receiving, persisting, inspecting, and retrying signed webhook events.
 
-**Current status:** Stage 6 — production-readiness hardening.
+The project demonstrates a production-conscious webhook boundary built with Clean Architecture: exact-body HMAC verification, PostgreSQL-backed idempotency, deterministic processing, bounded retries, operational APIs, health checks, and Docker-based local execution.
 
-The service accepts and persists generic signed webhook events, records deterministic processing outcomes, and exposes operational inspection and bounded manual retry scheduling. PostgreSQL remains the idempotency authority.
+## Features
 
-## Current architecture
+- HMAC-SHA256 verification of exact request-body bytes.
+- PostgreSQL persistence with unique `event_id` idempotency.
+- Stable duplicate handling for sequential and concurrent delivery.
+- Persisted processing attempts and sanitized failure metadata.
+- Bounded exponential-backoff retries and dead-letter state.
+- Atomic retry claiming for concurrent workers.
+- Event lookup, filtering, pagination, and manual retry APIs.
+- Separate liveness and database readiness endpoints.
+- Request correlation IDs, structured request logs, and metrics-friendly hooks.
+- Configurable request payload-size protection.
+- Unit, API, architecture, and PostgreSQL integration tests.
+
+## Architecture
 
 ```text
 src/reliable_webhook_api/
-├── application/
-│   ├── dto/
-│   ├── errors/
-│   ├── ports/
-│   ├── retries/
-│   └── use_cases/
-├── config/
-├── domain/
-├── infrastructure/
-│   ├── clock/
-│   ├── health/
-│   ├── observability/
-│   ├── persistence/
-│   │   └── models/
-│   ├── scheduling/
-│   ├── workers/
-│   └── security/
-└── presentation/
-    └── api/
-        ├── dependencies/
-        ├── middleware/
-        ├── routes/
-        └── schemas/
+├── domain/          # business concepts, state, retry and transition rules
+├── application/     # use cases, DTOs, errors, and explicit ports
+├── infrastructure/  # PostgreSQL, HMAC, processing, scheduling, workers, observability
+├── presentation/    # FastAPI routes/middleware/dependencies and CLI entry points
+└── config/          # validated runtime settings
 ```
 
-Domain and application remain independent from FastAPI, SQLAlchemy, database sessions, and infrastructure configuration. ORM models are mapped to domain objects inside the persistence adapter and never escape through application ports.
+Dependencies point inward: domain and application do not depend on FastAPI, SQLAlchemy, database sessions, or provider-specific infrastructure. Infrastructure implements application ports, while presentation performs HTTP/CLI mapping and dependency wiring.
 
-## Technology stack
+See [Event lifecycle](docs/event-lifecycle.md) and [Webhook signature](docs/signature.md) for focused design documentation.
 
-- Python 3.12
-- FastAPI and Uvicorn
-- SQLAlchemy async + asyncpg
-- PostgreSQL
-- Alembic
-- uv
-- Docker / Docker Compose
-- pytest and HTTPX
-- Ruff
-- Pyright
+## Technology
 
-## Local development
+Python 3.12, FastAPI, Uvicorn, SQLAlchemy async, asyncpg, PostgreSQL, Alembic, uv, Docker Compose, pytest, Ruff, and Pyright.
 
-Copy the example environment file and set a local webhook secret:
+## Quick start
+
+Requirements: Docker and Docker Compose.
+
+Clone the repository, copy the sample environment, and start the stack:
 
 ```bash
+git clone https://github.com/hamresan/reliable-webhook-api.git
+cd reliable-webhook-api
 cp .env.example .env
-```
-
-Start PostgreSQL and the API:
-
-```bash
 docker compose up --build
 ```
 
-For local Docker only, the API container waits for PostgreSQL and runs `alembic upgrade head` before starting Uvicorn. The API is available at `http://localhost:8000`.
+The local API is available at `http://localhost:8000`. The API container waits for PostgreSQL and applies Alembic migrations before starting Uvicorn.
 
-### Explicit migrations
-
-Production deployments must run migrations explicitly as a deployment step; application startup does not run migrations itself.
-
-```bash
-uv run alembic upgrade head
-```
-
-Rollback all migrations in a disposable local/test database:
-
-```bash
-uv run alembic downgrade base
-```
-
-A fresh database is bootstrapped entirely from the Alembic migration history.
-
-### Health check
+Check liveness and readiness:
 
 ```bash
 curl http://localhost:8000/health
-```
-
-Expected response:
-
-```json
-{"status":"ok"}
-```
-
-Readiness checks database connectivity separately:
-
-```bash
 curl http://localhost:8000/ready
 ```
 
-A ready service returns `{"status":"ready"}`. Database unavailability returns `503` without exposing database details.
+Expected responses are `{"status":"ok"}` and `{"status":"ready"}`.
 
-## Webhook receipt
+Send a correctly signed demo event and immediately inspect its stored status:
 
-Configure:
-
-```dotenv
-APP_WEBHOOK_SECRET=replace-with-local-secret
-APP_WEBHOOK_SIGNATURE_HEADER=X-Webhook-Signature
-APP_DATABASE_URL=postgresql+asyncpg://webhook:webhook@localhost:5432/webhook
-APP_LOGGING_LEVEL=INFO
-APP_MAX_PAYLOAD_BYTES=1048576
+```bash
+python examples/send_webhook.py
 ```
 
-The signature is the lowercase hexadecimal HMAC-SHA256 digest of the **exact HTTP request body bytes** using `APP_WEBHOOK_SECRET`.
+The script uses only the documented local sample secret by default. To target another local address or secret, set `WEBHOOK_BASE_URL` and `APP_WEBHOOK_SECRET`.
 
-Generic request envelope:
+## Configuration
+
+The sample `.env.example` contains placeholders only.
+
+| Variable | Local default/example | Purpose |
+| --- | --- | --- |
+| `APP_ENVIRONMENT` | `development` | Runtime environment |
+| `APP_HOST` | `0.0.0.0` | Application bind host outside Compose overrides |
+| `APP_PORT` | `8000` | Published local API port |
+| `APP_WEBHOOK_SECRET` | `replace-with-local-secret` | Shared HMAC secret |
+| `APP_WEBHOOK_SIGNATURE_HEADER` | `X-Webhook-Signature` | Signature header name |
+| `APP_DATABASE_URL` | local PostgreSQL URL | Async SQLAlchemy database URL |
+| `APP_LOGGING_LEVEL` | `INFO` | Application logging level |
+| `APP_MAX_PAYLOAD_BYTES` | `1048576` | Maximum accepted request payload |
+| `APP_RETRY_MAX_ATTEMPTS` | `3` | Retry attempt bound |
+| `APP_RETRY_BASE_DELAY_SECONDS` | `30` | Initial retry delay |
+| `APP_RETRY_MAX_DELAY_SECONDS` | `3600` | Maximum retry delay |
+
+Production configuration requires an explicit webhook secret and database URL. Invalid retry bounds fail settings validation.
+
+## API
+
+Interactive OpenAPI documentation is exposed by FastAPI at `/docs` while the application is running.
+
+### Receive an event
+
+`POST /webhooks/events`
+
+Request envelope:
 
 ```json
 {
   "event_id": "00000000-0000-0000-0000-000000000001",
   "event_type": "invoice.paid",
   "occurred_at": "2026-09-24T12:00:00Z",
-  "data": {
-    "invoice_id": "inv_1"
-  }
+  "data": {"invoice_id": "inv_1"}
 }
 ```
 
-`POST /webhooks/events` responses:
+The signature is the lowercase hexadecimal HMAC-SHA256 digest of the exact HTTP body bytes. See [signature documentation](docs/signature.md).
 
-- `202 Accepted` for a newly persisted event.
-- `200 OK` for an existing or concurrently duplicated `event_id`; `duplicate` is `true`.
-- `401 Unauthorized` when the signature is missing, malformed, or invalid.
-- `400 Bad Request` for an invalid event envelope after signature verification succeeds.
+Responses: `202` for a new event, `200` with `duplicate: true` for an existing/concurrent duplicate, `401` for a missing/malformed/invalid signature, and `400` for an invalid envelope after successful signature verification.
 
-Example successful response:
+### Operational endpoints
 
-```json
-{
-  "event_id": "00000000-0000-0000-0000-000000000001",
-  "status": "received",
-  "duplicate": false
-}
+- `GET /health` — process liveness.
+- `GET /ready` — database-backed readiness.
+- `GET /events/{event_id}` — event status, attempts, timestamps, and sanitized failure metadata.
+- `GET /events?status=failed&offset=0&limit=50` — filtered, paginated event list.
+- `POST /events/{event_id}/retry` — schedule a retry when state and retry policy permit it.
+
+## Idempotency
+
+PostgreSQL uniqueness on `event_id` is the final authority. A duplicate event does not create another persisted event. Concurrent uniqueness conflicts are translated into the same stable duplicate application result rather than leaking database exceptions.
+
+Idempotent receipt does not imply exactly-once effects in arbitrary downstream systems.
+
+## Processing and retries
+
+Events progress through explicit states including `received`, `processing`, `processed`, `failed`, `retry_scheduled`, and `dead_letter`.
+
+Only explicitly classified retryable failures are scheduled. Backoff is bounded by configuration and cannot bypass state-transition rules. Invalid-signature requests are rejected before persistence and never enter retry processing. `processed` and `dead_letter` are terminal.
+
+Run one due-retry worker pass locally with:
+
+```bash
+uv run python -m reliable_webhook_api.presentation.cli.retry_worker
 ```
 
-Database integrity errors are contained by the persistence adapter. A unique `event_id` conflict is translated to the stable duplicate application result; database exceptions are not exposed by the HTTP API.
+Or run the optional worker continuously with Compose:
 
-## Persistence model
+```bash
+docker compose --profile worker up --build
+```
 
-`webhook_events` stores the event ID, event type, JSON payload, occurred/received timestamps, status, sanitized failure metadata, version, and update timestamp. `processing_attempts` stores attempt number, processing timestamps, and sanitized failure metadata linked to the event.
+## Database migrations
 
-PostgreSQL is the runtime and integration-test database. SQLite may be used only for isolated tests where its behavior is feature-compatible; concurrency and transactional idempotency tests intentionally run against PostgreSQL.
+Production deployments should run migrations explicitly as a deployment step:
+
+```bash
+uv run alembic upgrade head
+```
+
+A fresh database can be created entirely from migration history. For a disposable development/test database:
+
+```bash
+uv run alembic downgrade base
+```
 
 ## Testing
 
-CI starts a real PostgreSQL service, applies the Alembic migration from a fresh schema, and runs repository, concurrency, JSON round-trip, and real-wiring API integration tests.
+Install development dependencies:
+
+```bash
+uv sync --dev
+```
 
 Run the complete quality gate:
 
@@ -173,85 +181,35 @@ uv run pyright src tests
 uv run pytest --cov=src --cov-report=term-missing
 ```
 
-## Engineering rules
+The configured coverage gate is 95%. CI uses PostgreSQL for integration behaviour that depends on real transactions, uniqueness, JSON persistence, concurrency, migrations, and dependency wiring.
 
-- Domain and application code do not depend on FastAPI, SQLAlchemy, or infrastructure.
-- Application use cases depend on explicit ports.
-- Persistence mapping is isolated from use-case orchestration.
-- HMAC verification uses exact raw body bytes and constant-time comparison.
-- Database uniqueness is the final authority for concurrent idempotency.
+## Security and deployment assumptions
+
+- HMAC comparison is constant-time and operates on exact body bytes.
 - Raw secrets, signatures, and private payloads are not logged or echoed.
-- Tests mirror source structure and integration boundaries.
-- No stage is merged until its quality gate and review are complete.
+- Request size is bounded before webhook processing.
+- Every response carries `X-Request-ID`; request logs contain correlation metadata rather than payload contents.
+- TLS termination is expected at a trusted reverse proxy or ingress.
+- Rate limiting should be enforced at the reverse proxy/API gateway.
+- Operational endpoints are unauthenticated in v0.1.0 and require deployment/network protection where appropriate.
+- Persisted payloads can contain business-sensitive data; deployments must define retention/deletion and backup policies.
+- CORS is intentionally disabled because this release has no browser-frontend requirement.
+- The local metrics adapter is a library-neutral hook, not a complete production monitoring stack.
 
-## Operational API
+## Limitations
 
-Available now:
+This release is a focused reference implementation rather than a hosted webhook platform. It does not provide tenant/auth management, a dashboard, provider-specific webhook adapters, application-level rate limiting, public TLS termination, or exactly-once guarantees across external systems.
 
-- `GET /health` — liveness only.
-- `GET /ready` — readiness with database connectivity.
-- `POST /webhooks/events`
-- `GET /events/{event_id}` — inspect status, attempts, timestamps, and sanitized failure metadata.
-- `GET /events?status=failed&offset=0&limit=50` — filter and paginate operational events.
-- `POST /events/{event_id}/retry` — schedule an allowed retry for a failed retryable event.
+The sample event handlers demonstrate the processing boundary; real downstream business integrations must supply their own processor behaviour and operational controls.
 
-Retry scheduling uses bounded exponential backoff. The default configuration allows three attempts, starts at 30 seconds, and caps the delay at one hour:
+## Project documents
 
-```dotenv
-APP_RETRY_MAX_ATTEMPTS=3
-APP_RETRY_BASE_DELAY_SECONDS=30
-APP_RETRY_MAX_DELAY_SECONDS=3600
-```
-
-Only explicitly classified failure codes are retryable. A retryable processing failure is automatically moved from `failed` to `retry_scheduled` with bounded exponential backoff; manual retry uses the same policy and cannot bypass state rules. Invalid-signature requests are rejected before persistence and therefore cannot enter the retry flow. Processed and dead-letter events are terminal.
-
-Operational examples:
-
-```bash
-curl http://localhost:8000/events/00000000-0000-0000-0000-000000000001
-
-curl "http://localhost:8000/events?status=retry_scheduled&offset=0&limit=50"
-
-curl -X POST \
-  http://localhost:8000/events/00000000-0000-0000-0000-000000000001/retry
-```
-
-A successful retry request returns `202 Accepted`:
-
-```json
-{
-  "event_id": "00000000-0000-0000-0000-000000000001",
-  "status": "retry_scheduled",
-  "retry_at": "2026-09-24T12:00:30Z"
-}
-```
-
-A scheduled retry is persisted as `retry_scheduled` with `next_retry_at`. Run due retries locally with:
-
-```bash
-uv run python -m reliable_webhook_api.presentation.cli.retry_worker
-```
-
-To run the optional local worker alongside Compose:
-
-```bash
-docker compose --profile worker up --build
-```
-
-The worker selects only due scheduled events and delegates orchestration to the application use case. Processing uses an atomic PostgreSQL status claim, so concurrent workers cannot both execute the processor for the same claim. A stale due-event selection is skipped safely if another worker has already claimed it. External exactly-once delivery across arbitrary downstream systems is not claimed.
-
-## Deployment and security assumptions
-
-- Production requires an explicit webhook secret and database URL; invalid retry bounds fail configuration validation.
-- The API enforces a configurable request payload limit before webhook processing.
-- Every response carries an `X-Request-ID`; callers may supply one, otherwise the API generates it. Request logs include method, path, status, and correlation ID, not raw webhook payloads or signatures.
-- Basic metrics hooks are intentionally library-neutral so a deployment can replace the local counter adapter with Prometheus/OpenTelemetry integration without changing domain code.
-- TLS termination is expected at a trusted reverse proxy or ingress. This application does not terminate public TLS itself.
-- Operational endpoints are intentionally unauthenticated in v0.1.0 and must be protected by deployment/network controls where required.
-- Rate limiting should be enforced at the reverse proxy/API gateway. The application-level payload limit is not a substitute for edge rate limiting.
-- Persisted webhook payloads may contain business-sensitive data. Define retention/deletion policy appropriate to the deployment and database backups.
-- CORS is not enabled because the current service has no browser frontend requirement.
+- [Event lifecycle](docs/event-lifecycle.md)
+- [Webhook signature](docs/signature.md)
+- [Contributing](CONTRIBUTING.md)
+- [v0.1.0 release notes](RELEASE_NOTES.md)
+- [MIT License](LICENSE)
 
 ## License
 
-A project license is planned for the final documentation/release stage.
+MIT. See [LICENSE](LICENSE).
