@@ -141,14 +141,12 @@ async def test_processing_claim_is_atomic_across_workers(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     event = build_event()
-    async with session_factory() as session:
-        async with SqlAlchemyUnitOfWork(session):
-            await SqlAlchemyEventRepository(session).add(event)
+    async with session_factory() as session, SqlAlchemyUnitOfWork(session):
+        await SqlAlchemyEventRepository(session).add(event)
 
     async def claim() -> WebhookEvent | None:
-        async with session_factory() as session:
-            async with SqlAlchemyUnitOfWork(session):
-                return await SqlAlchemyEventRepository(session).claim_for_processing(event.id)
+        async with session_factory() as session, SqlAlchemyUnitOfWork(session):
+            return await SqlAlchemyEventRepository(session).claim_for_processing(event.id)
 
     first, second = await asyncio.gather(claim(), claim())
 
