@@ -1,10 +1,6 @@
-from reliable_webhook_api.domain.events import (
-    EventId,
-    EventStatus,
-    FailureReason,
-    ProcessingAttempt,
-    WebhookEvent,
-)
+from reliable_webhook_api.domain.events import EventId, EventStatus, WebhookEvent
+from reliable_webhook_api.domain.failures import FailureReason
+from reliable_webhook_api.domain.processing import ProcessingAttempt
 from reliable_webhook_api.domain.transitions import (
     EventTransitionPolicy,
     InvalidEventTransitionError,
