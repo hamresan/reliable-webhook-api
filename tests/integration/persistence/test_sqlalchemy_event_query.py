@@ -72,3 +72,19 @@ async def test_due_retry_selection_excludes_future_and_other_states(
         events = await SqlAlchemyEventQuery(session).due_retries(NOW, limit=10)
 
     assert [event.id for event in events] == [due.id]
+
+
+async def test_get_returns_persisted_event_and_missing_returns_none(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    event = build_event(10, EventStatus.FAILED)
+    await persist(session_factory, [event])
+
+    async with session_factory() as session:
+        query = SqlAlchemyEventQuery(session)
+        persisted = await query.get(event.id)
+        missing = await query.get(EventId(UUID(int=999)))
+
+    assert persisted is not None
+    assert persisted.id == event.id
+    assert missing is None
