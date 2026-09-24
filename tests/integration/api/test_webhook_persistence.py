@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from httpx import ASGITransport, AsyncClient
+from pytest import MonkeyPatch
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from reliable_webhook_api.config import get_settings
@@ -18,7 +19,7 @@ EVENT_ID = UUID("00000000-0000-0000-0000-000000000301")
 
 async def test_api_uses_real_repository_and_dependency_wiring(
     session_factory: async_sessionmaker[AsyncSession],
-    monkeypatch,
+    monkeypatch: MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("APP_WEBHOOK_SECRET", SECRET)
     get_settings.cache_clear()
