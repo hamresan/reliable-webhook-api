@@ -1,6 +1,13 @@
 from datetime import datetime
 
-from reliable_webhook_api.application.ports import EventPage, EventQuery, RetryScheduler
+from reliable_webhook_api.application.dto import ProcessEventOutput
+from reliable_webhook_api.application.ports import (
+    DueRetryReader,
+    EventPage,
+    EventProcessingRunner,
+    EventQuery,
+    RetryScheduler,
+)
 from reliable_webhook_api.domain import EventId, EventStatus, WebhookEvent
 
 
@@ -23,6 +30,11 @@ class FakeEventQuery(EventQuery):
         matching = [event for event in self.events if status is None or event.status is status]
         return EventPage(items=matching[offset : offset + limit], total=len(matching))
 
+
+class FakeDueRetryReader(DueRetryReader):
+    def __init__(self, events: list[WebhookEvent]) -> None:
+        self.events = events
+
     async def due_retries(self, due_at: datetime, limit: int) -> list[WebhookEvent]:
         matching = [
             event
@@ -32,3 +44,12 @@ class FakeEventQuery(EventQuery):
             and event.next_retry_at <= due_at
         ]
         return matching[:limit]
+
+
+class FakeProcessingRunner(EventProcessingRunner):
+    def __init__(self) -> None:
+        self.event_ids: list[EventId] = []
+
+    async def process(self, event_id: EventId) -> ProcessEventOutput:
+        self.event_ids.append(event_id)
+        return ProcessEventOutput(event_id=event_id.value, status=EventStatus.PROCESSED)
