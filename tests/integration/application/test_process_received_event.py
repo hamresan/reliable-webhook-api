@@ -3,6 +3,9 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+import pytest
+
+from reliable_webhook_api.application.errors import InvalidTransitionError
 from reliable_webhook_api.application.processing import ProcessingFailureMapper
 from reliable_webhook_api.application.ports import EventProcessor
 from reliable_webhook_api.application.use_cases import ProcessReceivedEvent
@@ -96,12 +99,13 @@ async def test_processing_success_is_persisted_and_not_processed_twice(
     assert persisted.attempts[0].failure_reason is None
     assert processor.calls == 1
 
-    try:
+    with pytest.raises(InvalidTransitionError):
         await process(session_factory, processor)
-    except Exception:
-        pass
 
     assert processor.calls == 1
+    persisted_again = await load_event(session_factory)
+    assert persisted_again.status is EventStatus.PROCESSED
+    assert len(persisted_again.attempts) == 1
 
 
 async def test_processing_failure_and_attempt_are_persisted(
