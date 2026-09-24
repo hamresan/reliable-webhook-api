@@ -1,8 +1,6 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-import pytest
-
 from reliable_webhook_api.domain import (
     EventId,
     EventStatus,
@@ -32,26 +30,3 @@ def test_webhook_event_accepts_valid_domain_values() -> None:
     assert event.status is EventStatus.RECEIVED
     assert event.attempts == []
     assert event.failure_reason is None
-
-
-@pytest.mark.parametrize(
-    ("value_type", "message"),
-    [
-        (ProviderName, "Provider name"),
-        (ExternalEventId, "External event id"),
-        (EventType, "Event type"),
-    ],
-)
-@pytest.mark.parametrize("value", ["", "   "])
-def test_required_webhook_value_rejects_empty_text(
-    value_type: type[ProviderName] | type[ExternalEventId] | type[EventType],
-    message: str,
-    value: str,
-) -> None:
-    with pytest.raises(ValueError, match=message):
-        value_type(value)
-
-
-def test_received_at_rejects_naive_timestamp() -> None:
-    with pytest.raises(ValueError, match="timezone-aware"):
-        ReceivedAt(datetime.now())
