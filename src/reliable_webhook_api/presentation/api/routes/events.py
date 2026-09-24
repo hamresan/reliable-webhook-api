@@ -12,38 +12,12 @@ from reliable_webhook_api.presentation.api.dependencies.operations import (
     get_list_events_use_case,
     get_retry_event_use_case,
 )
+from reliable_webhook_api.presentation.api.mappers import OperationalResponseMapper
 
 router = APIRouter(prefix="/events", tags=["events"])
 GetEventDependency = Annotated[GetEvent, Depends(get_event_use_case)]
 ListEventsDependency = Annotated[ListEvents, Depends(get_list_events_use_case)]
 RetryEventDependency = Annotated[RetryEvent, Depends(get_retry_event_use_case)]
-
-
-def _event_content(event: object) -> dict[str, object]:
-    from reliable_webhook_api.application.dto import OperationalEventOutput
-
-    assert isinstance(event, OperationalEventOutput)
-    return {
-        "event_id": str(event.event_id),
-        "event_type": event.event_type,
-        "status": event.status.value,
-        "occurred_at": event.occurred_at.isoformat(),
-        "received_at": event.received_at.isoformat(),
-        "attempts": [
-            {
-                "number": attempt.number,
-                "started_at": attempt.started_at.isoformat(),
-                "finished_at": (
-                    attempt.finished_at.isoformat() if attempt.finished_at is not None else None
-                ),
-                "failure_code": attempt.failure_code,
-            }
-            for attempt in event.attempts
-        ],
-        "failure_code": event.failure_code,
-        "failure_message": event.failure_message,
-        "next_retry_at": event.next_retry_at.isoformat() if event.next_retry_at else None,
-    }
 
 
 @router.get("")
@@ -56,7 +30,7 @@ async def list_events(
     result = await use_case.execute(status, offset, limit)
     return JSONResponse(
         content={
-            "items": [_event_content(item) for item in result.items],
+            "items": [OperationalResponseMapper.to_dict(item) for item in result.items],
             "total": result.total,
             "offset": result.offset,
             "limit": result.limit,
@@ -70,7 +44,7 @@ async def get_event(event_id: UUID, use_case: GetEventDependency) -> JSONRespons
         result = await use_case.execute(EventId(event_id))
     except NotFoundError:
         return JSONResponse(status_code=404, content={"detail": "Webhook event was not found."})
-    return JSONResponse(content=_event_content(result))
+    return JSONResponse(content=OperationalResponseMapper.to_dict(result))
 
 
 @router.post("/{event_id}/retry")
