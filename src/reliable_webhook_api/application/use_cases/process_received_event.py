@@ -48,6 +48,7 @@ class ProcessReceivedEvent:
                 raise InvalidTransitionError(str(exc)) from exc
 
             event.status = EventStatus.PROCESSING
+            event.next_retry_at = None
             await self._repository.save(event)
 
             started_at = ProcessingTimestamp(self._clock.now())
