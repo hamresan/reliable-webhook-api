@@ -3,8 +3,9 @@ import hmac
 
 from reliable_webhook_api.application.use_cases import ReceiveWebhookEvent
 from reliable_webhook_api.infrastructure.clock import SystemClock
-from reliable_webhook_api.infrastructure.persistence import InMemoryEventRepository, NoopTransaction
+from reliable_webhook_api.infrastructure.persistence import InMemoryEventRepository
 from reliable_webhook_api.infrastructure.security import HmacSha256SignatureVerifier
+from tests.unit.application.use_cases.fakes import FakeUnitOfWork
 
 
 def sign(secret: str, payload: bytes) -> str:
@@ -19,5 +20,5 @@ def build_receive_use_case(
         repository=repository,
         signature_verifier=HmacSha256SignatureVerifier(secret),
         clock=SystemClock(),
-        transaction=NoopTransaction(),
+        unit_of_work=FakeUnitOfWork(),
     )
