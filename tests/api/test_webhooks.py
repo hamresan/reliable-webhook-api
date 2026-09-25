@@ -177,3 +177,26 @@ async def test_invalid_signature_response_does_not_leak_signature_or_secret() ->
     assert received_signature not in response.text
     assert SECRET not in response.text
     assert repository.is_empty()
+
+
+async def test_openapi_documents_webhook_body_and_signature_header() -> None:
+    app = create_app()
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.get("/openapi.json")
+
+    assert response.status_code == 200
+    operation = response.json()["paths"]["/webhooks/events"]["post"]
+
+    request_body_schema = operation["requestBody"]["content"]["application/json"]["schema"]
+    assert request_body_schema["anyOf"][0]["$ref"].endswith("/WebhookEventRequest")
+
+    parameters = operation["parameters"]
+    assert any(
+        parameter["in"] == "header"
+        and parameter["name"] == "X-Webhook-Signature"
+        for parameter in parameters
+    )
