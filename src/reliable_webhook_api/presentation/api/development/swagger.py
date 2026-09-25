@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from reliable_webhook_api.infrastructure.security import HmacSha256Signer
 
 _SIGNING_PATH = "/docs/webhook-signature"
+_DEFAULT_OPENAPI_URL = "/openapi.json"
 
 
 def configure_development_swagger(
@@ -25,10 +26,10 @@ def configure_development_swagger(
     @app.get("/docs", include_in_schema=False)
     async def swagger_ui() -> HTMLResponse:
         response = get_swagger_ui_html(
-            openapi_url=app.openapi_url,
+            openapi_url=app.openapi_url or _DEFAULT_OPENAPI_URL,
             title=f"{app.title} - Swagger UI",
         )
-        html = response.body.decode()
+        html = bytes(response.body).decode("utf-8")
         script = _build_request_signing_script(signature_header)
         return HTMLResponse(html.replace("</body>", f"{script}</body>"))
 
