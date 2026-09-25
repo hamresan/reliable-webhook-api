@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, Header, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError as PydanticValidationError
 
@@ -16,14 +16,32 @@ ReceiveWebhookEventDependency = Annotated[
     ReceiveWebhookEvent,
     Depends(get_receive_webhook_event),
 ]
-WebhookBodyDocumentation = Annotated[
-    WebhookEventRequest | None,
-    Body(include_in_schema=True),
-]
-WebhookSignatureDocumentation = Annotated[
-    str | None,
-    Header(alias="X-Webhook-Signature"),
-]
+
+_WEBHOOK_OPENAPI_EXTRA = {
+    "parameters": [
+        {
+            "name": "X-Webhook-Signature",
+            "in": "header",
+            "required": True,
+            "description": (
+                "Lowercase hex HMAC-SHA256 signature of the exact request body. "
+                "Do not send the webhook secret itself."
+            ),
+            "schema": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+            },
+        }
+    ],
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/json": {
+                "schema": WebhookEventRequest.model_json_schema(),
+            }
+        },
+    },
+}
 
 
 @router.post(
@@ -34,12 +52,11 @@ WebhookSignatureDocumentation = Annotated[
         400: {"description": "Invalid webhook event envelope."},
         401: {"description": "Invalid webhook signature."},
     },
+    openapi_extra=_WEBHOOK_OPENAPI_EXTRA,
 )
 async def receive_webhook_event(
     request: Request,
     use_case: ReceiveWebhookEventDependency,
-    _body: WebhookBodyDocumentation = None,
-    _signature: WebhookSignatureDocumentation = None,
 ) -> JSONResponse:
     raw_payload = await request.body()
     signature = request.headers.get(get_settings().webhook_signature_header)
