@@ -1,6 +1,8 @@
 services:
   db:
     image: postgres:17-alpine
+    ports:
+      - "${POSTGRES_PORT:-5492}:5432"
     environment:
       POSTGRES_DB: webhook
       POSTGRES_USER: webhook
@@ -12,14 +14,14 @@ services:
       retries: 10
     volumes:
       - webhook_postgres_data:/var/lib/postgresql/data
-  
+
   api:
     build: .
     ports:
       - "${APP_PORT:-8000}:8000"
     environment:
       APP_ENVIRONMENT: development
-      APP_DATABASE_URL: ${APP_DATABASE_URL:-postgresql+asyncpg://webhook:webhook@db:5432/webhook}
+      APP_DATABASE_URL: postgresql+asyncpg://webhook:webhook@db:5432/webhook
       APP_WEBHOOK_SECRET: ${APP_WEBHOOK_SECRET:-replace-with-local-secret}
       APP_LOGGING_LEVEL: ${APP_LOGGING_LEVEL:-INFO}
       APP_MAX_PAYLOAD_BYTES: ${APP_MAX_PAYLOAD_BYTES:-1048576}
@@ -40,7 +42,7 @@ services:
     build: .
     environment:
       APP_ENVIRONMENT: development
-      APP_DATABASE_URL: ${APP_DATABASE_URL:-postgresql+asyncpg://webhook:webhook@db:5432/webhook}
+      APP_DATABASE_URL: postgresql+asyncpg://webhook:webhook@db:5432/webhook
       APP_WEBHOOK_SECRET: ${APP_WEBHOOK_SECRET:-replace-with-local-secret}
       APP_LOGGING_LEVEL: ${APP_LOGGING_LEVEL:-INFO}
     depends_on:
