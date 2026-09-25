@@ -78,9 +78,10 @@ The sample `.env.example` contains placeholders only.
 | `APP_ENVIRONMENT` | `development` | Runtime environment |
 | `APP_HOST` | `0.0.0.0` | Application bind host outside Compose overrides |
 | `APP_PORT` | `8000` | Published local API port |
-| `APP_WEBHOOK_SECRET` | `replace-with-local-secret` | Shared HMAC secret |
+| `APP_WEBHOOK_SECRET` | `dev-webhook-secret-9f4c2a7e81b653d0` | Shared HMAC secret |
 | `APP_WEBHOOK_SIGNATURE_HEADER` | `X-Webhook-Signature` | Signature header name |
-| `APP_DATABASE_URL` | local PostgreSQL URL | Async SQLAlchemy database URL |
+| `APP_DATABASE_URL` | `postgresql+asyncpg://webhook:webhook@localhost:5492/webhook` | Async SQLAlchemy database URL for host-side commands |
+| `POSTGRES_PORT` | `5492` | PostgreSQL port published by Docker Compose |
 | `APP_LOGGING_LEVEL` | `INFO` | Application logging level |
 | `APP_MAX_PAYLOAD_BYTES` | `1048576` | Maximum accepted request payload |
 | `APP_RETRY_MAX_ATTEMPTS` | `3` | Retry attempt bound |
@@ -91,7 +92,7 @@ Production configuration requires an explicit webhook secret and database URL. I
 
 ## API
 
-Interactive OpenAPI documentation is exposed by FastAPI at `/docs` while the application is running.
+Interactive OpenAPI documentation is exposed by FastAPI at `/docs` while the application is running. In `development`, Swagger UI automatically signs `POST /webhooks/events` using the exact outgoing request body, so the endpoint can be tested without manually calculating the HMAC digest. The webhook secret remains server-side, and the development signing endpoint is not registered in production.
 
 ### Receive an event
 
