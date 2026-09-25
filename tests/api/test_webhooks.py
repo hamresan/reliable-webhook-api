@@ -204,7 +204,6 @@ async def test_openapi_documents_webhook_body_and_signature_header() -> None:
     signature_parameter = next(
         parameter
         for parameter in parameters
-        if parameter["in"] == "header"
-        and parameter["name"] == "X-Webhook-Signature"
+        if parameter["in"] == "header" and parameter["name"] == "X-Webhook-Signature"
     )
     assert signature_parameter["required"] is True
