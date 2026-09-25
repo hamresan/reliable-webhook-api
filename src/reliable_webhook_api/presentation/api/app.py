@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from reliable_webhook_api.config import get_settings
 from reliable_webhook_api.infrastructure.observability import configure_logging
+from reliable_webhook_api.presentation.api.development import configure_development_swagger
 from reliable_webhook_api.presentation.api.middleware import (
     CorrelationIdMiddleware,
     PayloadSizeLimitMiddleware,
@@ -17,7 +18,11 @@ def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.logging_level)
 
-    app = FastAPI(title=settings.app_name)
+    development_swagger_enabled = settings.environment == "development"
+    app = FastAPI(
+        title=settings.app_name,
+        docs_url=None if development_swagger_enabled else "/docs",
+    )
     app.add_middleware(CorrelationIdMiddleware)
     app.add_middleware(
         PayloadSizeLimitMiddleware,
@@ -26,6 +31,14 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(events_router)
     app.include_router(webhook_router)
+
+    if development_swagger_enabled:
+        configure_development_swagger(
+            app,
+            webhook_secret=settings.webhook_secret,
+            signature_header=settings.webhook_signature_header,
+        )
+
     return app
 
 
