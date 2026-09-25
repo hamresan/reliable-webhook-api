@@ -192,11 +192,19 @@ async def test_openapi_documents_webhook_body_and_signature_header() -> None:
     operation = response.json()["paths"]["/webhooks/events"]["post"]
 
     request_body_schema = operation["requestBody"]["content"]["application/json"]["schema"]
-    assert request_body_schema["anyOf"][0]["$ref"].endswith("/WebhookEventRequest")
+    assert request_body_schema["title"] == "WebhookEventRequest"
+    assert set(request_body_schema["required"]) == {
+        "event_id",
+        "event_type",
+        "occurred_at",
+        "data",
+    }
 
     parameters = operation["parameters"]
-    assert any(
-        parameter["in"] == "header"
-        and parameter["name"] == "X-Webhook-Signature"
+    signature_parameter = next(
+        parameter
         for parameter in parameters
+        if parameter["in"] == "header"
+        and parameter["name"] == "X-Webhook-Signature"
     )
+    assert signature_parameter["required"] is True
