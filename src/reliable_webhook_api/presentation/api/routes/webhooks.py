@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Body, Depends, Header, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError as PydanticValidationError
 
@@ -16,6 +16,14 @@ ReceiveWebhookEventDependency = Annotated[
     ReceiveWebhookEvent,
     Depends(get_receive_webhook_event),
 ]
+WebhookBodyDocumentation = Annotated[
+    WebhookEventRequest | None,
+    Body(include_in_schema=True),
+]
+WebhookSignatureDocumentation = Annotated[
+    str | None,
+    Header(alias="X-Webhook-Signature"),
+]
 
 
 @router.post(
@@ -30,6 +38,8 @@ ReceiveWebhookEventDependency = Annotated[
 async def receive_webhook_event(
     request: Request,
     use_case: ReceiveWebhookEventDependency,
+    _body: WebhookBodyDocumentation = None,
+    _signature: WebhookSignatureDocumentation = None,
 ) -> JSONResponse:
     raw_payload = await request.body()
     signature = request.headers.get(get_settings().webhook_signature_header)
