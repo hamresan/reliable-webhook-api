@@ -22,14 +22,22 @@ Do not parse and re-serialize JSON before signing. Whitespace and byte-level dif
 
 ## Example
 
-With `APP_WEBHOOK_SECRET=replace-with-local-secret`, a shell sender can calculate a signature with:
+With the local development secret from `.env.example`, a shell sender can calculate a signature with:
 
 ```bash
 SIGNATURE=$(printf '%s' "$PAYLOAD" \
-  | openssl dgst -sha256 -hmac 'replace-with-local-secret' -hex \
+  | openssl dgst -sha256 -hmac 'dev-webhook-secret-9f4c2a7e81b653d0' -hex \
   | awk '{print $2}')
 ```
 
 The API performs constant-time digest comparison. Missing, malformed, or invalid signatures return `401 Unauthorized`. Secrets and signatures are not echoed in API responses or request logs.
+
+## Testing from Swagger UI
+
+When `APP_ENVIRONMENT=development`, the Swagger UI at `/docs` can execute `POST /webhooks/events` without manually calculating the signature.
+
+For webhook requests started from Swagger UI, development tooling signs the exact outgoing request body on the backend and injects the resulting `X-Webhook-Signature` header before the webhook request is sent. The configured webhook secret is not embedded in or returned to browser JavaScript.
+
+The development signing endpoint is excluded from OpenAPI and is not registered when the application runs with `APP_ENVIRONMENT=production`. It is development tooling only and is not part of the public webhook API contract.
 
 The shared-secret examples in this repository are local demonstration values only. Use secret management appropriate to the deployment environment for real credentials.
