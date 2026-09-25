@@ -1,6 +1,8 @@
 services:
   db:
     image: postgres:17-alpine
+    ports:
+      - "${POSTGRES_PORT:-5492}:5432"
     environment:
       POSTGRES_DB: webhook
       POSTGRES_USER: webhook
@@ -12,7 +14,7 @@ services:
       retries: 10
     volumes:
       - webhook_postgres_data:/var/lib/postgresql/data
-  
+
   api:
     build: .
     ports:

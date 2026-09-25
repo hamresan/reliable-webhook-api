@@ -17,6 +17,32 @@ ReceiveWebhookEventDependency = Annotated[
     Depends(get_receive_webhook_event),
 ]
 
+_WEBHOOK_OPENAPI_EXTRA = {
+    "parameters": [
+        {
+            "name": "X-Webhook-Signature",
+            "in": "header",
+            "required": True,
+            "description": (
+                "Lowercase hex HMAC-SHA256 signature of the exact request body. "
+                "Do not send the webhook secret itself."
+            ),
+            "schema": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+            },
+        }
+    ],
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/json": {
+                "schema": WebhookEventRequest.model_json_schema(),
+            }
+        },
+    },
+}
+
 
 @router.post(
     "/events",
@@ -26,6 +52,7 @@ ReceiveWebhookEventDependency = Annotated[
         400: {"description": "Invalid webhook event envelope."},
         401: {"description": "Invalid webhook signature."},
     },
+    openapi_extra=_WEBHOOK_OPENAPI_EXTRA,
 )
 async def receive_webhook_event(
     request: Request,
